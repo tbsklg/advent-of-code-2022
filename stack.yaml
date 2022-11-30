@@ -1,0 +1,5 @@
+ghc-options:
+  $everything: -haddock
+packages:
+- .
+resolver: lts-18.17

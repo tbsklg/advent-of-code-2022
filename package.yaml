@@ -1,0 +1,57 @@
+name:                advent-of-code
+version:             0.2.0.0
+github:              "tbsklg/advent-of-code"
+license:             BSD3
+author:              "Tobias Klug"
+maintainer:          "tbs.klg@gmail.com"
+copyright:           "2022 Tobias Klug"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/advent-of-code-2022#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- split == 0.2.3.4
+- text == 1.2.4.1
+
+library:
+  source-dirs: src
+  dependencies:
+    - containers
+
+executables:
+  advent-of-code-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - advent-of-code == 0.2.0.0
+
+tests:
+  advent-of-code-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - advent-of-code == 0.2.0.0
+    - hspec == 2.7.10
+    - QuickCheck == 2.14.2
+    - HUnit == 1.6.2.0
+    - haskell-src-exts == 1.23.*
+    - containers
