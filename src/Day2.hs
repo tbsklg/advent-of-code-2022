@@ -2,22 +2,34 @@ module Day2 where
 
 import Data.List.Split (splitOn)
 import Day1 (solvePartTwo)
-import qualified Data.Bifunctor
 
-data RPS = Rock | Paper | Scissor deriving Eq
-data Result = Win | Loss | Draw deriving Eq
+type Game = (RPS, RPS)
+
+data RPS = Rock | Paper | Scissor deriving (Eq, Show)
+
+data Result = Win | Loss | Draw deriving (Eq, Show)
 
 solve :: [String] -> Int
-solve = foldl (\y x -> y + game x) 0 . map (Data.Bifunctor.bimap toRPS toRPS . (\x -> (head x, last x)))
+solve = foldl playSimpleGame 0 . map convert
 
 solvePartTwo :: [String] -> Int
-solvePartTwo = sum . map (pointsB . (\x -> (head x, last x)))
+solvePartTwo = foldl playGameWithStrategy 0 . map convertPartTwo
 
--- (1 for Rock, 2 for Paper, and 3 for Scissors)
--- (0 if you lost, 3 if the round was a draw, and 6 if you won)
--- X loose, Y means you need to end the round in a draw, and Z means you need to win.
+playSimpleGame :: Int -> (RPS, RPS) -> Int
+playSimpleGame endResult round@(opponentRPS, myRPS) = endResult + pointsPerGame
+  where
+    pointsPerGame = pointsForRPS myRPS + (pointsForResult . resultForGame $ round)
 
-game match@(opponent, me) = pointsRPS me + (pointsC . points $ match)
+playGameWithStrategy :: Int -> (RPS, Result) -> Int
+playGameWithStrategy endResult round@(opponentRPS, desiredResult) = endResult + pointsPerGame
+  where
+    pointsPerGame = pointsForResult desiredResult + (pointsForRPS . rpsForDesiredResult $ round)
+
+convert :: String -> Game
+convert raw = (toRPS . head $ raw, toRPS . last $ raw)
+
+convertPartTwo :: String -> (RPS, Result)
+convertPartTwo raw = (toRPS . head $ raw, convertToResult . last $ raw)
 
 toRPS :: Char -> RPS
 toRPS 'A' = Rock
@@ -26,49 +38,42 @@ toRPS 'B' = Paper
 toRPS 'Y' = Paper
 toRPS 'C' = Scissor
 toRPS 'Z' = Scissor
-toRPS _ = error ""
+toRPS _ = error "Could not convert to `RPS`!"
 
-pointsC :: Result -> Int
-pointsC Win = 6
-pointsC Draw = 3
-pointsC Loss = 0
+convertToResult :: Char -> Result
+convertToResult 'X' = Loss
+convertToResult 'Y' = Draw
+convertToResult 'Z' = Win
+convertToResult _ = error "Could not convert to `Result`!"
 
-pointsRPS :: Num p => RPS -> p
-pointsRPS Rock = 1
-pointsRPS Paper = 2
-pointsRPS Scissor = 3
+pointsForResult :: Result -> Int
+pointsForResult Win = 6
+pointsForResult Draw = 3
+pointsForResult Loss = 0
 
-points :: (RPS, RPS) -> Result
-points (Rock, Rock) = Draw
-points (Rock, Paper) = Win
-points (Rock, Scissor) = Loss
-points (Paper, Rock) = Loss
-points (Paper, Paper) = Draw
-points (Paper, Scissor) = Win
-points (Scissor, Rock) = Win
-points (Scissor, Paper) = Loss
-points (Scissor, Scissor) = Draw
+pointsForRPS :: RPS -> Int
+pointsForRPS Rock = 1
+pointsForRPS Paper = 2
+pointsForRPS Scissor = 3
 
--- points :: (Char, Char) -> Int
--- points (Rock, Rock) = 4
--- points (Rock, Paper) = 8
--- points (Rock, Scissor) = 3
--- points (Paper, Rock) = 1
--- points (Paper, Paper) = 5
--- points (Paper, Scissor) = 9
--- points (Scissor, Rock) = 7
--- points (Scissor, Paper) = 2
--- points (Scissor, Scissor) = 6
--- points _ = 0
+resultForGame :: Game -> Result
+resultForGame (Rock, Rock) = Draw
+resultForGame (Rock, Paper) = Win
+resultForGame (Rock, Scissor) = Loss
+resultForGame (Paper, Rock) = Loss
+resultForGame (Paper, Paper) = Draw
+resultForGame (Paper, Scissor) = Win
+resultForGame (Scissor, Rock) = Win
+resultForGame (Scissor, Paper) = Loss
+resultForGame (Scissor, Scissor) = Draw
 
-pointsB :: (Char, Char) -> Int
-pointsB ('A', 'X') = 3
-pointsB ('A', 'Y') = 4
-pointsB ('A', 'Z') = 8
-pointsB ('B', 'X') = 1
-pointsB ('B', 'Y') = 5
-pointsB ('B', 'Z') = 9
-pointsB ('C', 'X') = 2
-pointsB ('C', 'Y') = 6
-pointsB ('C', 'Z') = 7
-pointsB _ = 0
+rpsForDesiredResult :: (RPS, Result) -> RPS
+rpsForDesiredResult (Rock, Loss) = Scissor
+rpsForDesiredResult (Rock, Draw) = Rock
+rpsForDesiredResult (Rock, Win) = Paper
+rpsForDesiredResult (Paper, Loss) = Rock
+rpsForDesiredResult (Paper, Draw) = Paper
+rpsForDesiredResult (Paper, Win) = Scissor
+rpsForDesiredResult (Scissor, Loss) = Paper
+rpsForDesiredResult (Scissor, Draw) = Scissor
+rpsForDesiredResult (Scissor, Win) = Rock
