@@ -4,8 +4,11 @@ import Data.List.Split (divvy, splitOn, splitWhen)
 import qualified Data.Map as M
 
 type Stack = [String]
-type StackNumber = Int 
+
+type StackNumber = Int
+
 type Ship = M.Map StackNumber Stack
+
 data Move = Move {numberOfCrates :: Int, fromStack :: Int, toStack :: Int} deriving (Show, Eq)
 
 solve :: [String] -> String
@@ -51,14 +54,14 @@ performMove ship Move {numberOfCrates = n, fromStack = f, toStack = t} = targetS
       Nothing -> ship
 
 performMove2 :: Ship -> Move -> Ship
-performMove2 ship Move {numberOfCrates = n, fromStack = f, toStack = t} = targetShip
+performMove2 ship Move {numberOfCrates = numberOfCrates, fromStack = fromStack, toStack = toStack} = loadedShip
   where
-    (sourceCrate, sourceShip) = case M.lookup f ship of
-      Just a -> (take n a, M.insert f (drop n a) ship)
+    (unloadedCrate, unloadedShip) = case M.lookup fromStack ship of
+      Just stack -> (take numberOfCrates stack, M.insert fromStack (drop numberOfCrates stack) ship)
       Nothing -> ([], ship)
 
-    targetShip = case M.lookup t sourceShip of
-      Just a -> M.insert t (sourceCrate ++ a) sourceShip
+    loadedShip = case M.lookup toStack unloadedShip of
+      Just stack -> M.insert toStack (unloadedCrate ++ stack) unloadedShip
       Nothing -> ship
 
 topOfEachStack :: Ship -> String
