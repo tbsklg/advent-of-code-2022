@@ -1,7 +1,7 @@
 module Main where
 
 import System.IO (IOMode (ReadMode), hGetContents, openFile)
-import Day5
+import Day5 ( solve, solvePartTwo)
   
 main :: IO ()
 main = do
