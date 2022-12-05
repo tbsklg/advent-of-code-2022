@@ -5,6 +5,8 @@ import qualified Data.Map as M
 
 type Stack = [String]
 
+type Crates = [String]
+
 type StackNumber = Int
 
 type Ship = M.Map StackNumber Stack
@@ -12,24 +14,30 @@ type Ship = M.Map StackNumber Stack
 data Move = Move {numberOfCrates :: Int, fromStack :: Int, toStack :: Int} deriving (Show, Eq)
 
 solve :: [String] -> String
-solve xs = topOfEachStack . foldl performMove ship $ moves
+solve xs = topOfEachStack . foldl (performMove withCargoCrane) ship $ moves
   where
     ship = shipFrom . head . splitWhen (== "") $ xs
     moves = movesFrom . last . splitWhen (== "") $ xs
 
 solvePartTwo :: [String] -> String
-solvePartTwo xs = topOfEachStack . foldl performMove2 ship $ moves
+solvePartTwo xs = topOfEachStack . foldl (performMove withCrateMover9000) ship $ moves
   where
     ship = shipFrom . head . splitWhen (== "") $ xs
     moves = movesFrom . last . splitWhen (== "") $ xs
 
+withCargoCrane :: Crates -> Stack -> Stack
+withCargoCrane c s = reverse c ++ s
+
+withCrateMover9000 :: Crates -> Stack -> Stack
+withCrateMover9000 c s = c ++ s
+
 shipFrom :: [String] -> Ship
-shipFrom = M.fromList . zip [1 ..] . map (filter (/= " ")) . group . map (divvy 1 4 . tail)
+shipFrom = M.fromList . zip [1 ..] . map (filter (/= " ")) . groupByStack . map (divvy 1 4 . tail)
   where
-    group [] = []
-    group xs
+    groupByStack [] = []
+    groupByStack xs
       | all null xs = []
-      | otherwise = map head xs : (group . map tail $ xs)
+      | otherwise = map head xs : (groupByStack . map tail $ xs)
 
 movesFrom :: [String] -> [Move]
 movesFrom = map move
@@ -42,26 +50,15 @@ move xs =
       toStack = read . (!! 5) . splitOn " " $ xs
     }
 
-performMove :: Ship -> Move -> Ship
-performMove ship Move {numberOfCrates = n, fromStack = f, toStack = t} = targetShip
-  where
-    (sourceCrate, sourceShip) = case M.lookup f ship of
-      Just a -> (take n a, M.insert f (drop n a) ship)
-      Nothing -> ([], ship)
-
-    targetShip = case M.lookup t sourceShip of
-      Just a -> M.insert t (reverse sourceCrate ++ a) sourceShip
-      Nothing -> ship
-
-performMove2 :: Ship -> Move -> Ship
-performMove2 ship Move {numberOfCrates = numberOfCrates, fromStack = fromStack, toStack = toStack} = loadedShip
+performMove :: (Crates -> Stack -> Stack) -> Ship -> Move -> Ship
+performMove crane ship Move {numberOfCrates = numberOfCrates, fromStack = fromStack, toStack = toStack} = loadedShip
   where
     (unloadedCrate, unloadedShip) = case M.lookup fromStack ship of
       Just stack -> (take numberOfCrates stack, M.insert fromStack (drop numberOfCrates stack) ship)
       Nothing -> ([], ship)
 
     loadedShip = case M.lookup toStack unloadedShip of
-      Just stack -> M.insert toStack (unloadedCrate ++ stack) unloadedShip
+      Just a -> M.insert toStack (crane unloadedCrate a) unloadedShip
       Nothing -> ship
 
 topOfEachStack :: Ship -> String

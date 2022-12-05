@@ -18,9 +18,13 @@ spec = do
                      (Move {numberOfCrates = 1, fromStack = 1, toStack = 2})
                    ]
 
-    it "should perform a move" $ do
-      performMove (M.fromList [(1, ["N", "Z"]), (2, ["D", "C", "M"]), (3, ["P"])]) (Move {numberOfCrates = 1, fromStack = 2, toStack = 1}) `shouldBe` M.fromList [(1, ["D", "N", "Z"]), (2, ["C", "M"]), (3, ["P"])]
-      performMove (M.fromList [(1, ["N", "Z"]), (2, ["D", "C", "M"]), (3, ["P"])]) (Move {numberOfCrates = 2, fromStack = 2, toStack = 1}) `shouldBe` M.fromList [(1, ["C", "D", "N", "Z"]), (2, ["M"]), (3, ["P"])]
+    it "should perform a move with Cargo Crane" $ do
+      performMove withCargoCrane (M.fromList [(1, ["N", "Z"]), (2, ["D", "C", "M"]), (3, ["P"])]) (Move {numberOfCrates = 1, fromStack = 2, toStack = 1}) `shouldBe` M.fromList [(1, ["D", "N", "Z"]), (2, ["C", "M"]), (3, ["P"])]
+      performMove withCargoCrane (M.fromList [(1, ["N", "Z"]), (2, ["D", "C", "M"]), (3, ["P"])]) (Move {numberOfCrates = 2, fromStack = 2, toStack = 1}) `shouldBe` M.fromList [(1, ["C", "D", "N", "Z"]), (2, ["M"]), (3, ["P"])]
+
+    it "should perform a move with Crate Mover 9000" $ do
+      performMove withCrateMover9000 (M.fromList [(1, ["N", "Z"]), (2, ["D", "C", "M"]), (3, ["P"])]) (Move {numberOfCrates = 1, fromStack = 2, toStack = 1}) `shouldBe` M.fromList [(1, ["D", "N", "Z"]), (2, ["C", "M"]), (3, ["P"])]
+      performMove withCrateMover9000 (M.fromList [(1, ["N", "Z"]), (2, ["D", "C", "M"]), (3, ["P"])]) (Move {numberOfCrates = 2, fromStack = 2, toStack = 1}) `shouldBe` M.fromList [(1, ["D", "C", "N", "Z"]), (2, ["M"]), (3, ["P"])]
 
     it "should caputure the first crate from each stack" $ do
       topOfEachStack (M.fromList [(1, ["N", "Z"]), (2, ["D", "C", "M"]), (3, ["P"])]) `shouldBe` "NDP"
