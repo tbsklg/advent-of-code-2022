@@ -2,18 +2,17 @@ module Day6Spec where
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Day6
-import Day6 (containsMarker)
 
 spec :: Spec
 spec = do
   describe "tuning trouble" $ do
     it "should find the start of a packet marker" $ do
-        solve "mjqjpqmgbljsphdztnvjfqwrcgsmlb" `shouldBe` 5
+        solve "mjqjpqmgbljsphdztnvjfqwrcgsmlb" `shouldBe` 7
 
     it "should check if the sub routine contains a marker" $ do
-        containsMarker "mjqj" `shouldBe` False
-        containsMarker "vwbj" `shouldBe` True
+        isUnique "mjqj" `shouldBe` False
+        isUnique "vwbj" `shouldBe` True
     
     it "should find the position of the marker" $ do
-        findMarker "vwbj" `shouldBe` 4
+        findMarker 4 "vwbj" `shouldBe` 4
         
