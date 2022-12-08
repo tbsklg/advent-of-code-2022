@@ -13,12 +13,29 @@ data FSCrumb = FSCrumb Name [FSItem] [FSItem] deriving (Show, Eq)
 type FSZipper = (FSItem, [FSCrumb])
 
 solve :: [String] -> Int
-solve xs = sum . map snd . dirsAtMost100000 $ fileSystem
+solve xs = sum . map snd . dirsSmaller100000 $ fileSystem
   where
-    (fileSystem, _) = parse xs (Folder "Root" [], [])
+    (fileSystem, _) = performParsing xs
 
-dirsAtMost100000 :: FSItem -> [(String, Int)]
-dirsAtMost100000 = filter (\(_, size) -> size <= 100000) . dirs
+solvePartTwo :: [String] -> Int
+solvePartTwo xs = minimum . filter (>= spaceNeededForUpdate) . map snd . dirs $ fileSystem
+  where
+    spaceNeededForUpdate = updateSize - sizeOfUnusedSpace
+    sizeOfUnusedSpace = totalDiskSpace - greatestDirectory
+    greatestDirectory = maximum . map snd . dirs $ fileSystem
+    (fileSystem, _) = performParsing xs
+
+totalDiskSpace :: Int
+totalDiskSpace = 70000000
+
+updateSize :: Int
+updateSize = 30000000
+
+dirsSmaller100000 :: FSItem -> [(String, Int)]
+dirsSmaller100000 = filter (\(_, size) -> size <= 100000) . dirs
+
+performParsing :: [String] -> FSZipper
+performParsing xs = parse xs (Folder "Root" [], [])
 
 parse :: [String] -> FSZipper -> FSZipper
 parse [] current = fsRoot current
@@ -30,14 +47,14 @@ parse (x : xs) current@(Folder folderName items, bs) = go . splitOn " " $ x
     go ["$", "ls"] = parse xs current
     go ["dir", dirName] = parse xs (Folder folderName (Folder dirName [] : items), bs)
     go [fileSize, fileName] = parse xs (Folder folderName (File fileName (read fileSize) : items), bs)
-    go _ = error "fdsa"
-parse _ _ = error "fdsa"
+    go _ = error "Unsupported instruction"
+parse _ _ = error "Unsupported instruction"
 
 attachFolder :: Name -> FSZipper -> FSZipper
 attachFolder name (Folder folderName items, bs) = (item, FSCrumb folderName ls rs : bs)
   where
     (ls, item : rs) = break (nameIs name) items
-attachFolder _ _ = error ""
+attachFolder _ _ = error "Could not attach folder"
 
 nameIs :: Name -> FSItem -> Bool
 nameIs name (Folder folderName _) = name == folderName
@@ -49,7 +66,7 @@ fsRoot folder = fsRoot (fsUp folder)
 
 fsUp :: FSZipper -> FSZipper
 fsUp (item, FSCrumb name ls rs : bs) = (Folder name (ls ++ [item] ++ rs), bs)
-fsUp _ = error ""
+fsUp _ = error "Could not move out one level"
 
 dirs :: FSItem -> [(String, Int)]
 dirs folder@(Folder name items) = (name, dirSize folder) : concatMap dirs items

@@ -1,6 +1,6 @@
 module Day7Spec where
 
-import Day7 (FSCrumb (..), FSItem (..), FSZipper (..), dirSize, fsRoot, parse, solve)
+import Day7 (FSCrumb (..), FSItem (..), FSZipper (..), dirSize, fsRoot, parse, solve, solvePartTwo)
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 spec :: Spec
@@ -35,3 +35,8 @@ spec = do
     it "should calculate the dir size" $ do
       dirSize (Folder "d" [File "k" 5, File "d.ext" 10]) `shouldBe` 15
       dirSize (Folder "d" [File "k" 5, File "d.ext" 10, Folder "e" [File "k" 15, File "d.ext" 10]]) `shouldBe` 40
+
+    it "should calculate the smallest directory that, if deleted, would free up enough space on the filesystem to run the update" $ do
+      solvePartTwo ["$ cd /", "$ ls", "dir a", "14848514 b.txt", "8504156 c.dat", "dir d", "$ cd a", "$ ls", "dir e", "29116 f", "2557 g", "62596 h.lst", "$ cd e", "$ ls", "584 i", "$ cd ..", "$ cd ..", "$ cd d", "$ ls", "4060174 j", "8033020 d.log", "5626152 d.ext", "7214296 k"]
+        `shouldBe` 24933642
+    
