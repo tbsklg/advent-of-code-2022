@@ -1,21 +1,32 @@
 module Day9 where
 
+import Data.List (nub)
 import Data.List.Split (splitOn)
-import qualified Data.Set as S
 
 data Direction = U | D | R | L deriving (Show, Eq, Enum)
 
-data Motion = Motion Direction Int deriving (Show, Eq)
-
 type Position = (Int, Int)
 
-type State = (Position, [Position])
+data Motion = Motion Direction Int deriving (Show, Eq)
+
+type State = [Position]
 
 solve :: [String] -> Int
-solve = length . visitedOnce . snd . go ((0,0), []) . convertToMotions
+solve = length . nub . go [(0, 0)] . convertToMotions
   where
     go state [] = state
-    go state (x:xs) = go (move state x) xs
+    go state (x : xs) = go (performMotion state x) xs
+
+solvePartTwo :: [String] -> Int
+solvePartTwo =
+  length . nub . map last
+    . scanl performMotionWithNKnots (replicate 10 (0, 0))
+    . flatten
+    . convertToMotions
+
+flatten :: [Motion] -> [Direction]
+flatten [] = []
+flatten (Motion direction step : xs) = replicate step direction ++ flatten xs
 
 convertToMotions :: [String] -> [Motion]
 convertToMotions [] = []
@@ -27,43 +38,30 @@ convertToMotions (x : xs) = go . splitOn " " $ x
     go ["R", step] = Motion R (read step) : convertToMotions xs
     go _ = error "Could not convert to motion"
 
-move :: State -> Motion -> State
-move state (Motion _ 0) = state
-move ((hx, hy), tailPositions) (Motion R step)
-  | null tailPositions = move (newHead, newTail : tailPositions) (Motion R (step -1))
-  | isConnected newHead (head tailPositions) = move (newHead, tailPositions) (Motion R (step -1))
-  | otherwise = move (newHead, newTail : tailPositions) (Motion R (step -1))
+performMotionWithNKnots :: [Position] -> Direction -> [Position]
+performMotionWithNKnots knots direction = go [] knots
   where
-    newHead@(newHeadX, newHeadY) = (hx + 1, hy)
-    newTail = (newHeadX - 1, newHeadY)
-move ((hx, hy), tailPositions) (Motion D step)
-  | null tailPositions = move (newHead, newTail : tailPositions) (Motion D (step -1))
-  | isConnected newHead (head tailPositions) = move (newHead, tailPositions) (Motion D (step -1))
-  | otherwise = move (newHead, newTail : tailPositions) (Motion D (step -1))
-  where
-    newHead@(newHeadX, newHeadY) = (hx, hy - 1)
-    newTail = (newHeadX, newHeadY + 1)
-move ((hx, hy), tailPositions) (Motion L step)
-  | null tailPositions = move (newHead, newTail : tailPositions) (Motion L (step -1))
-  | isConnected newHead (head tailPositions) = move (newHead, tailPositions) (Motion L (step -1))
-  | otherwise = move (newHead, newTail : tailPositions) (Motion L (step -1))
-  where
-    newHead@(newHeadX, newHeadY) = (hx - 1, hy)
-    newTail = (newHeadX + 1, newHeadY)
-move ((hx, hy), tailPositions) (Motion U step)
-  | null tailPositions = move (newHead, newTail : tailPositions) (Motion U (step -1))
-  | isConnected newHead (head tailPositions) = move (newHead, tailPositions) (Motion U (step -1))
-  | otherwise = move (newHead, newTail : tailPositions) (Motion U (step -1))
-  where
-    newHead@(newHeadX, newHeadY) = (hx, hy + 1)
-    newTail = (newHeadX, newHeadY - 1)
+    go newKnots [] = newKnots
+    go [] (h : ks) = go [move h direction] ks
+    go robe (k : ks) = go (robe ++ [moveTo (last robe) k]) ks
 
-isConnected :: (Int, Int) -> (Int, Int) -> Bool
-isConnected (hx, hy) (tx, ty) = overlays || directly || diagonally
+performMotion :: State -> Motion -> State
+performMotion [] _ = []
+performMotion state (Motion _ 0) = state
+performMotion rope@[h] (Motion direction steps) = performMotion (move h direction : rope) (Motion direction (steps - 1))
+performMotion rope@(h : ks) (Motion direction steps) = performMotion nextKs (Motion direction (steps - 1))
   where
-    overlays = hx == tx && hy == ty
-    directly = abs (hx - tx) == 1 && hy == ty || abs (hy - ty) == 1 && hx == tx
-    diagonally = abs (hx - tx) == 1 && abs (hy - ty) == 1
+    nextH = move h direction
+    nextT = moveTo nextH (head ks)
+    nextKs = nextH : (nextT : ks)
 
-visitedOnce :: [(Int, Int)] -> [(Int, Int)]
-visitedOnce = S.toList . S.fromList
+move :: Position -> Direction -> Position
+move (x, y) R = (x + 1, y)
+move (x, y) L = (x - 1, y)
+move (x, y) U = (x, y + 1)
+move (x, y) D = (x, y - 1)
+
+moveTo :: (Int, Int) -> (Int, Int) -> (Int, Int)
+moveTo (hx, hy) (tx, ty)
+  | abs (hx - tx) <= 1 && abs (hy - ty) <= 1 = (tx, ty)
+  | otherwise = (tx + signum (hx - tx), ty + signum (hy - ty))
