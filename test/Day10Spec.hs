@@ -28,5 +28,5 @@ spec = do
       signalStrength [Register 20 (21, 16), Register 60 (19, 5), Register 100 (18, 11), Register 140 (21, 8), Register 180 (16, 13), Register 220 (18, 4)] `shouldBe` 13140
 
     it "should draw pixels for instructions" $ do
-      draw [Register 1 (1,1),Register 2 (1,16),Register 3 (16,16),Register 4 (16,5),Register 5 (5,5),Register 6 (5,11),Register 7 (11,11),Register 8 (11,8)] [0,1,2] `shouldBe` "##..##.."
+      draw [Register 1 (1,1),Register 2 (1,16),Register 3 (16,16),Register 4 (16,5),Register 5 (5,5),Register 6 (5,11),Register 7 (11,11),Register 8 (11,8)] `shouldBe` "##..##.."
     

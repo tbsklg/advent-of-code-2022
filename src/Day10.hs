@@ -1,6 +1,7 @@
 module Day10 where
 
-import Data.List.Split (splitOn)
+import Data.List.Split (splitOn, chunksOf)
+import Data.List (intercalate)
 
 data Instruction = NOOP | ADDX Int deriving (Show, Eq)
 
@@ -9,8 +10,8 @@ data Register = Register Int (Int, Int) deriving (Show, Eq)
 solve :: [String] -> Int
 solve = signalStrength . signals . execute . parse
 
-registers :: [String] -> [Register]
-registers = execute . parse
+solvePartTwo :: [String] -> String
+solvePartTwo = screen . draw . execute . parse
 
 parse :: [String] -> [Instruction]
 parse [] = []
@@ -18,13 +19,16 @@ parse (x : xs)
   | x == "noop" = NOOP : parse xs
   | otherwise = ADDX (read . last . splitOn " " $ x) : parse xs
 
-draw :: [Register] -> [Int] -> String
-draw [] sprite = ""
-draw (Register cycle (incoming, outgoing):rs) sprite
-    | cycle `elem` sprite = "#" ++ draw rs nextSprite
-    | otherwise = "." ++ draw rs nextSprite
+screen :: String -> String
+screen = intercalate "\n" . chunksOf 40
+
+draw :: [Register] -> String
+draw [] = ""
+draw (Register cycle (incoming, outgoing):rs)
+    | (cycle - 1) `mod` 40 `elem` sprite = "#" ++ draw rs
+    | otherwise = "." ++ draw rs
     where
-        nextSprite = [outgoing - 1, outgoing, outgoing + 1]
+        sprite = [incoming - 1, incoming, incoming + 1]
 
 signalStrength :: [Register] -> Int
 signalStrength = foldl (\y (Register cycle (value, _)) -> y + (cycle * value)) 0
