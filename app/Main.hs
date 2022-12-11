@@ -8,4 +8,5 @@ main = do
   handle <- openFile "app/resources/day10.txt" ReadMode
   contents <- hGetContents handle
   print $ solve $ lines contents
+  print $ registers $ lines contents
   -- print $ solvePartTwo $ lines contents
