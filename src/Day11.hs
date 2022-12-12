@@ -48,7 +48,7 @@ play lcm monkeys = foldl throw monkeys monkeyNumbers
   where
     throw currentMonkeys number = case M.lookup number currentMonkeys of
       Just throwingMonkey -> throwItems (number, lcm, throwingMonkey) currentMonkeys
-      Nothing -> error "Could not find monkey to throw to!"
+      Nothing -> error "Could not find monkey to throw to"
 
     monkeyNumbers = M.keys monkeys
 
@@ -94,7 +94,7 @@ throwItems
                 }
             )
             updatedMonkeys
-        Nothing -> error "Could not find a recipient!"
+        Nothing -> error "Could not find a recipient"
 
 parse :: [String] -> Monkeys
 parse xs = go xs M.empty
@@ -147,7 +147,7 @@ parseOperationFn = go . splitOn " "
       | operator == "-" = \x -> x - operant
       | operator == "/" = (`div` operant)
       | operator == "+" = (+ operant)
-      | otherwise = error ""
+      | otherwise = error "Could not parse operator"
       where
         operant = read . last $ raw
         operator = last . init $ raw

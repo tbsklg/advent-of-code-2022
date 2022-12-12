@@ -9,4 +9,3 @@ main = do
   contents <- hGetContents handle
   print $ solve $ lines contents
   print $ solvePartTwo $ lines contents
-  -- putStr $ solvePartTwo $ lines contents
