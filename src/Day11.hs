@@ -26,7 +26,7 @@ lcmFor :: [Integer] -> Integer
 lcmFor = foldr lcm 1
 
 playN :: Integer -> [String] -> Integer
-playN n raw = 
+playN n raw =
   product
     . take 2
     . reverse
@@ -57,7 +57,7 @@ throwItems (_, _, Note {items = []}) monkeys = monkeys
 throwItems
   ( number,
     lcm,
-    Note
+    currentNote@Note
       { items = (i : is),
         operationFn = currentOperationFn,
         recipientFn = currentRecipientFn,
@@ -71,26 +71,19 @@ throwItems
       worryLevel = currentOperationFn i `mod` lcm
 
       updatedMonkey =
-        ( Note
+        ( currentNote
             { items = is,
-              operationFn = currentOperationFn,
-              recipientFn = currentRecipientFn,
-              interactionCount = currentCount + 1,
-              divisor = currentDivisor
+              interactionCount = currentCount + 1
             }
         )
       updatedMonkeys = M.insert number updatedMonkey monkeys
 
       nextMonkeys = case M.lookup recipient updatedMonkeys of
-        Just a ->
+        Just recipientMonkey@a ->
           M.insert
             recipient
-            ( Note
-                { items = items a ++ [worryLevel],
-                  operationFn = operationFn a,
-                  recipientFn = recipientFn a,
-                  interactionCount = interactionCount a,
-                  divisor = divisor a
+            ( recipientMonkey
+                { items = items recipientMonkey ++ [worryLevel]
                 }
             )
             updatedMonkeys
