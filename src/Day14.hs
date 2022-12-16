@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use tuple-section" #-}
 module Day14 where
 
 import Data.Function (on)
@@ -17,31 +14,29 @@ data Path = Path {from :: Point, to :: Point} deriving (Show, Eq)
 solve :: [String] -> Int
 solve = length . filter (=='o') . concat . furtherFallings . grid (500,0) . parse
 
-parse :: [String] -> [Path]
+parse :: [String] -> [Point]
 parse [] = []
-parse (r : rs) = extractedPath ++ parse rs
+parse (r : rs) = (concat . go . map extractPoint . splitOn " -> " $ r) ++ parse rs
   where
-    extractedPath = go . map extractPoint . splitOn " -> " $ r
-
     go [] = []
     go [_] = []
-    go (x : y : ys) = (Path {from = x, to = y}) : go (y : ys)
+    go (x : y : ys) = flatten x y : go (y : ys)
 
 extractPoint :: String -> Point
 extractPoint xs = (read . head $ parts, read . last $ parts)
   where
     parts = splitOn "," xs
 
-normalize :: [Path] -> Point -> ([Path], Point)
-normalize paths (sx, sy) = (normalizedPath, normalizedPouringPosition)
+normalize :: [Point] -> Point -> ([Point], Point)
+normalize points (sx, sy) = (normalizedPoints, normalizedPouringPosition)
   where
-    normalizedPath = map (\x -> Path {from = normalized . from $ x, to = normalized . to $ x}) paths
+    normalizedPoints = map normalized points
     normalizedPouringPosition = (sx - minX, sy)
 
     normalized (x, y) = (x - minX, y)
 
-    minX = minimum . foldl (\y x -> fst (from x) : fst (to x) : y) [] $ paths
-    minY = minimum . foldl (\y x -> snd (from x) : snd (to x) : y) [] $ paths
+    minX = minimum . map fst $ points
+    minY = minimum . map snd $ points
 
 air :: Char
 air = '.'
@@ -49,14 +44,14 @@ air = '.'
 sand :: (Int, Int)
 sand = (500, 0)
 
-grid :: Point -> [Path] -> (Point, Grid)
-grid pouringPosition paths = (normalizedPouringPosition, buildRocks (flatten normalizedPath) initialGrid)
+grid :: Point -> [Point] -> (Point, Grid)
+grid pouringPosition paths = (normalizedPouringPosition, buildRocks normalizedPoints initialGrid)
   where
     buildRocks [] grid = grid
     buildRocks (p : ps) grid = buildRocks ps (replace p '#' grid)
 
-    (normalizedPath, normalizedPouringPosition) = normalize paths pouringPosition
-    initialGrid = emptyGridFrom normalizedPath
+    (normalizedPoints, normalizedPouringPosition) = normalize paths pouringPosition
+    initialGrid = emptyGridFrom normalizedPoints
 
 furtherFallings :: (Point, Grid) -> Grid
 furtherFallings (pouringPosition, abc) = fallDownFrom pouringPosition abc
@@ -89,16 +84,15 @@ replace (x, y) toInsert grid = nextGrid
     updatedLine = take x lineToUpdate ++ [toInsert] ++ drop (x + 1) lineToUpdate
     nextGrid = take y grid ++ [updatedLine] ++ drop (y + 1) grid
 
-flatten :: [Path] -> [(Int, Int)]
-flatten = nub . go
+flatten :: Point -> Point -> [Point]
+flatten from = nub . go from
   where
-    go [] = []
-    go (Path {from = (x, y), to = (x', y')} : ps)
-      | x == x' = map (\z -> (x, z)) [minimum [y, y'] .. maximum [y, y']] ++ go ps
-      | otherwise = map (\z -> (z, y)) [minimum [x, x'] .. maximum [x, x']] ++ go ps
+    go (x, y) (x', y')
+      | x == x' = map (\z -> (x, z)) [minimum [y, y'] .. maximum [y, y']]
+      | otherwise = map (\z -> (z, y)) [minimum [x, x'] .. maximum [x, x']]
 
-emptyGridFrom :: [Path] -> Grid
-emptyGridFrom paths = foldl (\y x -> y ++ [replicate xSize air]) [] [0 .. ySize - 1]
+emptyGridFrom :: [Point] -> Grid
+emptyGridFrom points = foldl (\y x -> y ++ [replicate xSize air]) [] [0 .. ySize - 1]
   where
-    xSize = (+ 1) . maximum . foldl (\y x -> fst (from x) : fst (to x) : y) [] $ paths
-    ySize = (+ 1) . maximum . foldl (\y x -> snd (from x) : snd (to x) : y) [] $ paths
+    xSize = (+ 1) . maximum . map fst $ points
+    ySize = (+ 1) . maximum . map snd $ points
