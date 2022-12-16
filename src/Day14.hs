@@ -11,11 +11,14 @@ type Grid = [String]
 
 data Path = Path {from :: Point, to :: Point} deriving (Show, Eq)
 
+pouringPosition :: (Int, Int)
+pouringPosition = (500, 0)
+
 solve :: [String] -> Int
-solve = simulateFalling . grid (500, 0) . parse
+solve = simulateFalling . grid pouringPosition . parse
 
 solvePartTwo :: [String] -> Int
-solvePartTwo xs = simulateFalling2 . grid (500, 0) $ parse xs
+solvePartTwo xs = simulateFalling2 . grid pouringPosition $ parse xs
 
 parse :: [String] -> [Point]
 parse [] = []
@@ -29,12 +32,6 @@ extractPoint :: String -> Point
 extractPoint xs = (read . head $ parts, read . last $ parts)
   where
     parts = splitOn "," xs
-
-air :: Char
-air = '.'
-
-sand :: (Int, Int)
-sand = (500, 0)
 
 grid :: Point -> [Point] -> (Point, S.Set Point)
 grid pouringPosition points = (pouringPosition, buildRocks points initialGrid)
@@ -80,14 +77,12 @@ fallDown2 point@(x, y) maxY grid
   | otherwise = Just (x, y)
 
 blocked2 :: Point -> Int -> S.Set Point -> Bool
-blocked2 point@(x,y) maxY s = S.member point s || y > maxY
+blocked2 point@(x, y) maxY s = S.member point s || y > maxY
 
 blocked :: Point -> S.Set Point -> Bool
 blocked = S.member
 
 flatten :: Point -> Point -> [Point]
-flatten from = nub . go from
-  where
-    go (x, y) (x', y')
-      | x == x' = map (\z -> (x, z)) [minimum [y, y'] .. maximum [y, y']]
-      | otherwise = map (\z -> (z, y)) [minimum [x, x'] .. maximum [x, x']]
+flatten (x, y) (x', y')
+  | x == x' = map (\z -> (x, z)) [minimum [y, y'] .. maximum [y, y']]
+  | otherwise = map (\z -> (z, y)) [minimum [x, x'] .. maximum [x, x']]
