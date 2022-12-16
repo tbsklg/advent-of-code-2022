@@ -1,11 +1,13 @@
 module Main where
 
 import System.IO (IOMode (ReadMode), hGetContents, openFile)
-import Day13
+import Day14
+import Data.List (intercalate, maximumBy)
   
 main :: IO ()
 main = do
-  handle <- openFile "app/resources/day13.txt" ReadMode
+  handle <- openFile "app/resources/day14.txt" ReadMode
   contents <- hGetContents handle
   print $ solve $ lines contents
-  print $ solvePartTwo $ lines contents
+  putStrLn $ intercalate "\n" . furtherFallings . grid (500,0) . parse $ lines contents
+  -- print $ solvePartTwo $ lines contents
