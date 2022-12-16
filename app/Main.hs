@@ -9,5 +9,5 @@ main = do
   handle <- openFile "app/resources/day14.txt" ReadMode
   contents <- hGetContents handle
   print $ solve $ lines contents
-  putStrLn $ intercalate "\n" . furtherFallings . grid (500,0) . parse $ lines contents
-  -- print $ solvePartTwo $ lines contents
+  -- putStrLn $ intercalate "\n" . solvePartTwo $ lines contents
+  print $ solvePartTwo $ lines contents
