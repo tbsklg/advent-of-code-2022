@@ -1,40 +1,47 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use tuple-section" #-}
 module Day15 where
 
-import Data.Char (isDigit)
-import Data.Foldable
-import Data.Function
-import Data.List (nub)
+import Data.List (nub, sort)
 import Data.List.Split (splitOn)
-import qualified Data.Map as M
-import qualified Data.Set as S
-import Debug.Trace
 
 type Position = (Int, Int)
+
 type Range = (Int, Int)
 
 data Scanner = Scanner {position :: Position, closestBeacon :: Position} deriving (Show, Eq)
 
-type Scans = S.Set Position
-
 solve :: [String] -> Int
-solve xs = result
+solve xs = numberOfScannedPositions numberOfPoints beaconsAtTargetLine
   where
-    result = guenther numberOfPoints beaconXPositionsAtTarget
-    numberOfPoints = nub . reduceRanges . guenther2 scanners $ 2000000
+    numberOfPoints = nub . reduceRanges . allScanningRanges scanners $ 10
+    beaconsAtTargetLine = nub . filter (\x -> snd x == 10) . map closestBeacon $ scanners
 
-    beaconXPositionsAtTarget = nub . filter (\x -> snd x == 2000000) . map closestBeacon $ scanners
     scanners = parse xs
 
-solvePartTwo :: [String] -> [[(Int, Int)]]
-solvePartTwo xs = error ""
+solvePartTwo :: [String] -> Maybe Int
+solvePartTwo xs = findBeaconAt [0 .. 4000000]
+  where
+    findBeaconAt [] = Nothing
+    findBeaconAt (row : rs) = case findBeacon . numberOfPoints $ row of
+      Just a -> Just (a * 4000000 + row)
+      Nothing -> findBeaconAt rs
+
+    numberOfPoints row = nub . reduceRanges . allScanningRanges scanners $ row
+    scanners = parse xs
+
+findBeacon :: [(Int, Int)] -> Maybe Int
+findBeacon [] = Nothing
+findBeacon [range] = Nothing
+findBeacon [(from, to), (nextFrom, nextTo)]
+  | nextFrom - to == 2 = Just (nextFrom - 1)
+  | otherwise = Nothing
+findBeacon ((from, to) : (nextFrom, nextTo) : rs)
+  | nextFrom - to == 2 = Just (nextFrom - 1)
+  | otherwise = findBeacon rs
 
 reduceRanges :: [(Int, Int)] -> [(Int, Int)]
 reduceRanges ranges = go ranges []
   where
-    go [] result = result
+    go [] result = sort result
     go ((from, to) : xs) result
       | null overlaps = go xs ((from, to) : result)
       | otherwise = go xs nextResult
@@ -45,22 +52,22 @@ reduceRanges ranges = go ranges []
 
         overlaps = filter (\(f, t) -> from <= t && f <= to || (from == t + 1)) result
 
-overlaps2 :: Position -> Position -> Bool
-overlaps2 (x, y) (x', y') = x <= y' && x' <= y
+overlaps :: Position -> Position -> Bool
+overlaps (x, y) (x', y') = x <= y' && x' <= y
 
-guenther2 :: [Scanner] -> Int -> [Range]
-guenther2 [] _ = []
-guenther2 (scanner : xs) targetY = case scanningPositions scanner targetY of
-  Just a -> a : guenther2 xs targetY
-  Nothing -> guenther2 xs targetY
+allScanningRanges :: [Scanner] -> Int -> [Range]
+allScanningRanges [] _ = []
+allScanningRanges (scanner : xs) targetY = case scanningRange scanner targetY of
+  Just a -> a : allScanningRanges xs targetY
+  Nothing -> allScanningRanges xs targetY
 
-guenther :: [Range] -> [Position] -> Int
-guenther [] _ = 0
-guenther ((from, to) : xs) beaconXPositions
-  | numberOfBeaconsBetween == 0 = to - from + 1 + guenther xs beaconXPositions
-  | otherwise = to - from + 1 - numberOfBeaconsBetween + guenther xs beaconXPositions
+numberOfScannedPositions :: [Range] -> [Position] -> Int
+numberOfScannedPositions [] _ = 0
+numberOfScannedPositions ((from, to) : xs) beaconPositions
+  | overlappingBeacons == 0 = to - from + 1 + numberOfScannedPositions xs beaconPositions
+  | otherwise = to - from + 1 - overlappingBeacons + numberOfScannedPositions xs beaconPositions
   where
-    numberOfBeaconsBetween = length . filter (overlaps2 (from, to)) $ beaconXPositions
+    overlappingBeacons = length . filter (overlaps (from, to)) $ beaconPositions
 
 manhattenDistance :: Position -> Position -> Int
 manhattenDistance (x, y) (x', y') = abs (y' - y) + abs (x' - x)
@@ -83,11 +90,11 @@ extractPosition xs = (x, y)
     splitted = splitOn " " xs
 
 readNumber :: String -> Int
-readNumber ('-':xs) = read xs * (-1)
+readNumber ('-' : xs) = read xs * (-1)
 readNumber xs = read xs
 
-scanningPositions :: Scanner -> Int -> Maybe Range
-scanningPositions Scanner {position = (x, y), closestBeacon = (bx, by)} targetY
+scanningRange :: Scanner -> Int -> Maybe Range
+scanningRange Scanner {position = (x, y), closestBeacon = (bx, by)} targetY
   | distance - distanceY < 0 = Nothing
   | otherwise = Just (x - (distance - distanceY), x + (distance - distanceY))
   where
