@@ -7,15 +7,15 @@ type Position = (Int, Int)
 
 type Range = (Int, Int)
 
-data Scanner = Scanner {position :: Position, closestBeacon :: Position} deriving (Show, Eq)
+data Sensor = Sensor {position :: Position, closestBeacon :: Position} deriving (Show, Eq)
 
 solve :: [String] -> Int
 solve xs = numberOfScannedPositions numberOfPoints beaconsAtTargetLine
   where
-    numberOfPoints = nub . reduceRanges . allScanningRanges scanners $ 10
-    beaconsAtTargetLine = nub . filter (\x -> snd x == 10) . map closestBeacon $ scanners
+    numberOfPoints = nub . reduceRanges . allScanningRanges sensors $ 10
+    beaconsAtTargetLine = nub . filter (\x -> snd x == 10) . map closestBeacon $ sensors
 
-    scanners = parse xs
+    sensors = parse xs
 
 solvePartTwo :: [String] -> Maybe Int
 solvePartTwo xs = findBeaconAt [0 .. 4000000]
@@ -25,8 +25,8 @@ solvePartTwo xs = findBeaconAt [0 .. 4000000]
       Just a -> Just (a * 4000000 + row)
       Nothing -> findBeaconAt rs
 
-    numberOfPoints row = nub . reduceRanges . allScanningRanges scanners $ row
-    scanners = parse xs
+    numberOfPoints row = nub . reduceRanges . allScanningRanges sensors $ row
+    sensors = parse xs
 
 findBeacon :: [(Int, Int)] -> Maybe Int
 findBeacon [] = Nothing
@@ -55,9 +55,9 @@ reduceRanges ranges = go ranges []
 overlaps :: Position -> Position -> Bool
 overlaps (x, y) (x', y') = x <= y' && x' <= y
 
-allScanningRanges :: [Scanner] -> Int -> [Range]
+allScanningRanges :: [Sensor] -> Int -> [Range]
 allScanningRanges [] _ = []
-allScanningRanges (scanner : xs) targetY = case scanningRange scanner targetY of
+allScanningRanges (sensor : xs) targetY = case scanningRange sensor targetY of
   Just a -> a : allScanningRanges xs targetY
   Nothing -> allScanningRanges xs targetY
 
@@ -72,11 +72,11 @@ numberOfScannedPositions ((from, to) : xs) beaconPositions
 manhattenDistance :: Position -> Position -> Int
 manhattenDistance (x, y) (x', y') = abs (y' - y) + abs (x' - x)
 
-parse :: [String] -> [Scanner]
+parse :: [String] -> [Sensor]
 parse [] = []
 parse (x : xs) = extractScanner . splitOn ":" $ x
   where
-    extractScanner raw = Scanner {position = position, closestBeacon = beacon} : parse xs
+    extractScanner raw = Sensor {position = position, closestBeacon = beacon} : parse xs
 
     position = extractPosition . head $ splitted
     beacon = extractPosition . last $ splitted
@@ -93,8 +93,8 @@ readNumber :: String -> Int
 readNumber ('-' : xs) = read xs * (-1)
 readNumber xs = read xs
 
-scanningRange :: Scanner -> Int -> Maybe Range
-scanningRange Scanner {position = (x, y), closestBeacon = (bx, by)} targetY
+scanningRange :: Sensor -> Int -> Maybe Range
+scanningRange Sensor {position = (x, y), closestBeacon = (bx, by)} targetY
   | distance - distanceY < 0 = Nothing
   | otherwise = Just (x - (distance - distanceY), x + (distance - distanceY))
   where
