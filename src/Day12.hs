@@ -4,7 +4,6 @@ import Data.List (elemIndex, elemIndices, nub, sort)
 import qualified Data.Map as M
 import Data.Maybe (catMaybes, fromJust)
 import qualified Data.Set as S
-import Debug.Trace
 
 type Location = (Int, Int)
 
