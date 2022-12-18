@@ -10,8 +10,10 @@ import Data.List (nub)
 import Data.List.Split (splitOn)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import Debug.Trace
 
 type Position = (Int, Int)
+type Range = (Int, Int)
 
 data Scanner = Scanner {position :: Position, closestBeacon :: Position} deriving (Show, Eq)
 
@@ -21,35 +23,38 @@ solve :: [String] -> Int
 solve xs = result
   where
     result = guenther numberOfPoints beaconXPositionsAtTarget
-    numberOfPoints = nub . union . guenther2 scanners $ 2000000
+    numberOfPoints = nub . reduceRanges . guenther2 scanners $ 2000000
 
     beaconXPositionsAtTarget = nub . filter (\x -> snd x == 2000000) . map closestBeacon $ scanners
     scanners = parse xs
 
-union :: [(Int, Int)] -> [(Int, Int)]
-union ranges = go ranges []
+solvePartTwo :: [String] -> [[(Int, Int)]]
+solvePartTwo xs = error ""
+
+reduceRanges :: [(Int, Int)] -> [(Int, Int)]
+reduceRanges ranges = go ranges []
   where
     go [] result = result
     go ((from, to) : xs) result
       | null overlaps = go xs ((from, to) : result)
       | otherwise = go xs nextResult
       where
-        nextResult = (minX, maxX) : filter (\(f, t) -> not (from <= t && f <= to)) result
+        nextResult = (minX, maxX) : filter (\(f, t) -> not (from <= t && f <= to || (from == t + 1))) result
         minX = minimum [minimum . map fst $ overlaps, from]
         maxX = maximum [maximum . map snd $ overlaps, to]
 
-        overlaps = filter (\(f, t) -> from <= t && f <= to) result
+        overlaps = filter (\(f, t) -> from <= t && f <= to || (from == t + 1)) result
 
 overlaps2 :: Position -> Position -> Bool
 overlaps2 (x, y) (x', y') = x <= y' && x' <= y
 
-guenther2 :: [Scanner] -> Int -> [(Int, Int)]
+guenther2 :: [Scanner] -> Int -> [Range]
 guenther2 [] _ = []
 guenther2 (scanner : xs) targetY = case scanningPositions scanner targetY of
   Just a -> a : guenther2 xs targetY
   Nothing -> guenther2 xs targetY
 
-guenther :: [(Int, Int)] -> [(Int, Int)] -> Int
+guenther :: [Range] -> [Position] -> Int
 guenther [] _ = 0
 guenther ((from, to) : xs) beaconXPositions
   | numberOfBeaconsBetween == 0 = to - from + 1 + guenther xs beaconXPositions
@@ -81,13 +86,10 @@ readNumber :: String -> Int
 readNumber ('-':xs) = read xs * (-1)
 readNumber xs = read xs
 
-scanningPositions :: Scanner -> Int -> Maybe (Int, Int)
+scanningPositions :: Scanner -> Int -> Maybe Range
 scanningPositions Scanner {position = (x, y), closestBeacon = (bx, by)} targetY
-  | (targetY <= y && (y - distance) <= targetY) || (targetY >= y && (y + distance) >= targetY) = positionsOnTarget y distance
-  | otherwise = Nothing
+  | distance - distanceY < 0 = Nothing
+  | otherwise = Just (x - (distance - distanceY), x + (distance - distanceY))
   where
-    positionsOnTarget currentY d
-      | targetY == currentY = Just (x - d, x + d)
-      | currentY > targetY = positionsOnTarget (currentY - 1) (d - 1)
-      | otherwise = positionsOnTarget (currentY + 1) (d - 1)
+    distanceY = abs (y - targetY)
     distance = manhattenDistance (x, y) (bx, by)
