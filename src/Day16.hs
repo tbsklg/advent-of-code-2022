@@ -21,26 +21,20 @@ solve xs = do
     Left a -> error "Input parsing not working!"
     Right a -> print a
 
-minDistance :: String -> String -> M.Map String Valve -> Maybe Int
-minDistance start end tunnel = go (S.singleton start) 0 (S.singleton start)
+minDistance :: String -> String -> Tunnel -> Maybe Int
+minDistance start end tunnel = go [start] 0 []
   where
     go toVisit minute visited
-      | S.null toVisit = Nothing
-      | S.member end toVisit = Just minute
+      | null toVisit = Nothing
+      | end `elem` toVisit = Just minute
       | otherwise = go newToVisit (minute + 1) newVisited
       where
         newToVisit =
-          S.difference
-            ( S.unions
-                ( map
-                    ( \x ->
-                        S.fromList (neighbours (tunnel M.! x))
-                    )
-                    (S.toList toVisit)
-                )
-            )
-            visited
-        newVisited = S.union visited newToVisit
+          [ x
+          | x <- concatMap (neighbours . (tunnel M.!)) toVisit
+          , x `notElem` visited
+          ]
+        newVisited = visited ++ newToVisit
 
 valvesWithFlowGreaterThanZero :: Tunnel -> [String]
 valvesWithFlowGreaterThanZero tunnel = filter (\x -> flowRate (tunnel M.! x) > 0) (M.keys tunnel)

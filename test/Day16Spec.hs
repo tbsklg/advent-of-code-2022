@@ -6,10 +6,11 @@ import Day16
 import Test.Hspec (Spec, describe, it, shouldBe)
 import qualified Text.Parsec as P
 
+testValves :: [Char]
 testValves = "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB\nValve HH has flow rate=22; tunnel leads to valve GG\n"
 
-tunnel :: M.Map [Char] Valve
-tunnel =
+bigTunnel :: M.Map [Char] Valve
+bigTunnel =
   M.fromList
     [ ("AA", Valve {name = "AA", flowRate = 0, neighbours = ["DD", "II", "BB"]}),
       ("BB", Valve {name = "BB", flowRate = 13, neighbours = ["CC", "AA"]}),
@@ -30,7 +31,17 @@ spec = do
       parseValves "" testValves `shouldBe` Right [Valve {name = "AA", flowRate = 0, neighbours = ["DD", "II", "BB"]}, Valve {name = "HH", flowRate = 22, neighbours = ["GG"]}]
 
     it "should find valves with flow rate greater than zero" $ do
-      valvesWithFlowGreaterThanZero tunnel `shouldBe` ["BB", "CC", "DD", "EE", "HH", "JJ"]
+      valvesWithFlowGreaterThanZero bigTunnel `shouldBe` ["BB", "CC", "DD", "EE", "HH", "JJ"]
 
-    it "should walk within the tunnel" $ do
-      minDistance "AA" "DD" tunnel `shouldBe` Just 1
+  describe "minDistance" $ do
+    it "should return Nothing when start and end nodes are not connected" $ do
+      minDistance "AA" "ZZ" bigTunnel `shouldBe` Nothing
+
+    it "should return the correct distance when start and end nodes are connected" $ do
+      minDistance "AA" "CC" bigTunnel `shouldBe` Just 2
+
+    it "should return the correct distance when start and end nodes are the same" $ do
+      minDistance "AA" "AA" bigTunnel `shouldBe` Just 0
+
+    it "should return the correct distance when there are multiple paths to the end node" $ do
+      minDistance "BB" "DD" bigTunnel `shouldBe` Just 2
