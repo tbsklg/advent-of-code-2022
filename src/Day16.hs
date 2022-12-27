@@ -1,9 +1,12 @@
 module Day16 where
 
-import Data.List (nub)
+import Data.Function (on)
+import Data.List (maximumBy, nub, permutations, (\\))
 import qualified Data.Map as M
 import Data.Maybe (fromJust)
+import Data.Ord (comparing)
 import qualified Data.Set as S
+import Debug.Trace
 import qualified Text.Parsec as P
 import Text.Parsec.Char (letter)
 import Text.Parsec.Combinator (sepBy)
@@ -12,17 +15,45 @@ data Valve = Valve {name :: String, flowRate :: Int, neighbours :: [String]} der
 
 type Tunnel = M.Map String Valve
 
-data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int} deriving (Show, Eq)
+data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int, visited :: [String]} deriving (Show, Eq)
 
 solve :: IO String -> IO ()
 solve xs = do
   result <- parseValves "" <$> xs
   case result of
     Left a -> error "Input parsing not working!"
-    Right a -> print a
+    Right a -> print . test . createTunnel $ a
 
-minDistance :: String -> String -> Tunnel -> Maybe Int
-minDistance start end tunnel = go [start] 0 []
+createTunnel :: [Valve] -> Tunnel
+createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
+
+test :: Tunnel -> Int
+test tunnel = maximum . map (\x -> overallPressure tunnel ("AA": x) 30) $ valvesToOpen
+  where
+    valvesToOpen = permutations . valvesWithFlowGreaterThanZero $ tunnel
+
+overallPressure :: Tunnel -> [String] -> Int -> Int
+overallPressure tunnel path minutes = walk path minutes 0 []
+  where
+    walk [] time overallPressure _ = overallPressure
+    walk _ 0 overallPressure _ = overallPressure
+    walk [v] time overallPressure opened
+      | time - 1 >= 0 && v `notElem` opened = walk [] 0 nextPressure (v:opened)
+      | otherwise = overallPressure
+      where
+        nextPressure = overallPressure + time * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
+
+    walk (v:vs) time overallPressure opened
+      | time - 1 - dist > 0 && v `notElem` opened = walk vs (time - 1 - dist) nextPressure  (v:opened)
+      | v `notElem` opened = flowRate (tunnel M.! v)
+      | otherwise = overallPressure
+      where
+        nextPressure = overallPressure + (dist + 1) * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
+
+        dist = fromJust . distance v (head vs) $ tunnel
+
+distance :: String -> String -> Tunnel -> Maybe Int
+distance start end tunnel = go [start] 0 []
   where
     go toVisit minute visited
       | null toVisit = Nothing
@@ -31,8 +62,8 @@ minDistance start end tunnel = go [start] 0 []
       where
         newToVisit =
           [ x
-          | x <- concatMap (neighbours . (tunnel M.!)) toVisit
-          , x `notElem` visited
+            | x <- concatMap (neighbours . (tunnel M.!)) toVisit,
+              x `notElem` visited
           ]
         newVisited = visited ++ newToVisit
 

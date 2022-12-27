@@ -24,6 +24,14 @@ bigTunnel =
       ("JJ", Valve {name = "JJ", flowRate = 21, neighbours = ["II"]})
     ]
 
+simpleTunnel =
+  M.fromList
+    [ ("AA", Valve {name = "AA", flowRate = 1, neighbours = ["CC", "DD"]}),
+      ("CC", Valve {name = "CC", flowRate = 2, neighbours = ["AA", "BB"]}),
+      ("BB", Valve {name = "BB", flowRate = 3, neighbours = ["CC", "DD"]}),
+      ("DD", Valve {name = "DD", flowRate = 0, neighbours = ["BB", "AA"]})
+    ]
+
 spec :: Spec
 spec = do
   describe "Proboscidea Volcanium" $ do
@@ -35,13 +43,30 @@ spec = do
 
   describe "minDistance" $ do
     it "should return Nothing when start and end nodes are not connected" $ do
-      minDistance "AA" "ZZ" bigTunnel `shouldBe` Nothing
+      distance "AA" "ZZ" bigTunnel `shouldBe` Nothing
 
     it "should return the correct distance when start and end nodes are connected" $ do
-      minDistance "AA" "CC" bigTunnel `shouldBe` Just 2
+      distance "AA" "CC" bigTunnel `shouldBe` Just 2
 
     it "should return the correct distance when start and end nodes are the same" $ do
-      minDistance "AA" "AA" bigTunnel `shouldBe` Just 0
+      distance "AA" "AA" bigTunnel `shouldBe` Just 0
 
     it "should return the correct distance when there are multiple paths to the end node" $ do
-      minDistance "BB" "DD" bigTunnel `shouldBe` Just 2
+      distance "BB" "DD" bigTunnel `shouldBe` Just 2
+      distance "HH" "II" bigTunnel `shouldBe` Just 6
+      distance "II" "JJ" bigTunnel `shouldBe` Just 1
+
+  describe "maxPressure" $ do
+    it "should return the path using a dfs strategy" $ do
+      overallPressure simpleTunnel ["AA"] 1 `shouldBe` 1
+      overallPressure simpleTunnel ["AA"] 5 `shouldBe` 5
+      overallPressure simpleTunnel ["AA", "CC"] 5 `shouldBe` 11
+      overallPressure simpleTunnel ["AA", "BB"] 1 `shouldBe` 1
+      overallPressure simpleTunnel ["AA", "BB"] 5 `shouldBe` 11
+      overallPressure simpleTunnel ["AA", "BB"] 6 `shouldBe` 15
+
+      overallPressure bigTunnel ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"] 30 `shouldBe` 1651
+
+  describe "overallDistance" $ do
+    it "should return the overall distance for a given path" $ do
+      test bigTunnel `shouldBe` 1651
