@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 module Day16 where
 
 import Data.Function (on)
@@ -23,6 +24,10 @@ type Time = Int
 
 data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int, visited :: [String]} deriving (Show, Eq)
 
+instance Ord Valve where
+  compare :: Valve -> Valve -> Ordering
+  compare v1 v2 = compare (flowRate v1) (flowRate v2)
+
 solve :: IO String -> IO ()
 solve xs = do
   result <- parseValves "" <$> xs
@@ -34,27 +39,38 @@ createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
 test :: Tunnel -> Int
-test tunnel = maximum . map (\x -> overallPressure tunnel ("AA": x) 30 [] distances) $ valvesToOpen
+test tunnel = maximum . map (\x ->fst. overallPressure tunnel ("AA" : x) 30 [] $ distances) $ valvesToOpen
   where
     valvesToOpen = permutations . valvesWithFlowGreaterThanZero $ tunnel
     distances = distanceMatrix "AA" tunnel
 
-overallPressure :: Tunnel -> Path -> Time -> [String] -> Distances -> Int
-overallPressure tunnel path time opened distances = case path of
-  [] -> 0
-  [v] -> pressureFromVertex tunnel v time opened distances
-  (v:vs) -> pressureFromVertex tunnel v (timeToOpen + timeToWalk) opened distances + overallPressure tunnel vs remainingTime (v:opened) distances
-    where
-      timeToOpen = 1
-      remainingTime = max 0 (time - timeToOpen - timeToWalk)
-      timeToWalk = fromJust . M.lookup (v, head vs) $ distances
+type Cache = M.Map (Tunnel, Path, Time, [String], Distances) Int
+
+overallPressure :: Tunnel -> Path -> Time -> [String] -> Distances -> (Int, Cache)
+overallPressure = overallPressureMemo M.empty
+
+overallPressureMemo :: Cache -> Tunnel -> Path -> Time -> [String] -> Distances -> (Int, Cache)
+overallPressureMemo memo tunnel path time opened distances =
+  case M.lookup (tunnel, path, time, opened, distances) memo of
+    Just result -> (result, memo)
+    Nothing -> (result', memo')
+      where
+        result' = case path of
+          [] -> 0
+          [v] -> pressureFromVertex tunnel v time opened distances
+          (v : vs) -> pressureFromVertex tunnel v (timeToOpen + timeToWalk) opened distances + fst (overallPressureMemo memo' tunnel vs remainingTime (v : opened) distances)
+            where
+              timeToOpen = 1
+              remainingTime = max 0 (time - timeToOpen - timeToWalk)
+              timeToWalk = fromJust . M.lookup (v, head vs) $ distances
+        memo' = M.insert (tunnel, path, time, opened, distances) result' memo
 
 pressureFromVertex :: Tunnel -> String -> Time -> [String] -> Distances -> Int
 pressureFromVertex tunnel v time opened distances
   | time - 1 >= 0 && v `notElem` opened = time * currentPressure
   | otherwise = 0
   where
-    currentPressure = sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened)
+    currentPressure = sum . map (\x -> flowRate (tunnel M.! x)) $ (v : opened)
 
 distanceMatrix :: String -> M.Map String Valve -> M.Map (String, String) Int
 distanceMatrix start tunnel = go M.empty (start : valvesWithFlowGreaterThanZero tunnel)
