@@ -58,14 +58,14 @@ spec = do
 
   describe "maxPressure" $ do
     it "should return the path using a dfs strategy" $ do
-      overallPressure simpleTunnel ["AA"] 1 `shouldBe` 1
-      overallPressure simpleTunnel ["AA"] 5 `shouldBe` 5
-      overallPressure simpleTunnel ["AA", "CC"] 5 `shouldBe` 11
-      overallPressure simpleTunnel ["AA", "BB"] 1 `shouldBe` 1
-      overallPressure simpleTunnel ["AA", "BB"] 5 `shouldBe` 11
-      overallPressure simpleTunnel ["AA", "BB"] 6 `shouldBe` 15
+      pressureX simpleTunnel ["AA"] 1 `shouldBe` 1
+      pressureX simpleTunnel ["AA"] 5 `shouldBe` 5
+      pressureX simpleTunnel ["AA", "CC"] 5 `shouldBe` 11
+      pressureX simpleTunnel ["AA", "BB"] 1 `shouldBe` 3
+      pressureX simpleTunnel ["AA", "BB"] 5 `shouldBe` 11
+      pressureX simpleTunnel ["AA", "BB"] 6 `shouldBe` 15
 
-      overallPressure bigTunnel ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"] 30 `shouldBe` 1651
+      pressureX bigTunnel ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"] 30 `shouldBe` 1651
 
   describe "overallDistance" $ do
     it "should return the overall distance for a given path" $ do
