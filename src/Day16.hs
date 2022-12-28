@@ -15,6 +15,8 @@ data Valve = Valve {name :: String, flowRate :: Int, neighbours :: [String]} der
 
 type Tunnel = M.Map String Valve
 
+type Distances = M.Map (String, String) Int
+
 data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int, visited :: [String]} deriving (Show, Eq)
 
 solve :: IO String -> IO ()
@@ -28,12 +30,13 @@ createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
 test :: Tunnel -> Int
-test tunnel = maximum . map (\x -> overallPressure tunnel ("AA": x) 30) $ valvesToOpen
+test tunnel = maximum . map (\x -> overallPressure tunnel ("AA": x) 30 distances) $ valvesToOpen
   where
     valvesToOpen = permutations . valvesWithFlowGreaterThanZero $ tunnel
+    distances = distanceMatrix "AA" tunnel
 
-overallPressure :: Tunnel -> [String] -> Int -> Int
-overallPressure tunnel path minutes = walk path minutes 0 []
+overallPressure :: Tunnel -> [String] -> Int -> Distances -> Int
+overallPressure tunnel path minutes distances = walk path minutes 0 []
   where
     walk [] time overallPressure _ = overallPressure
     walk _ 0 overallPressure _ = overallPressure
@@ -50,7 +53,15 @@ overallPressure tunnel path minutes = walk path minutes 0 []
       where
         nextPressure = overallPressure + (dist + 1) * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
 
-        dist = fromJust . distance v (head vs) $ tunnel
+        dist = fromJust . M.lookup (v, head vs) $ distances
+
+distanceMatrix :: String -> M.Map String Valve -> M.Map (String, String) Int
+distanceMatrix start tunnel = go M.empty (start : valvesWithFlowGreaterThanZero tunnel)
+  where
+    go distances [] = distances
+    go distances (x : xs) = go (M.union newDistances distances) xs
+      where
+        newDistances = M.fromList [((x, y), fromJust . distance x y $ tunnel) | y <- M.keys tunnel \\ [x]]
 
 distance :: String -> String -> Tunnel -> Maybe Int
 distance start end tunnel = go [start] 0 []
