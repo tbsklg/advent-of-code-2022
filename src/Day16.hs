@@ -40,20 +40,21 @@ test tunnel = maximum . map (\x -> overallPressure tunnel ("AA": x) 30 [] distan
     distances = distanceMatrix "AA" tunnel
 
 overallPressure :: Tunnel -> Path -> Time -> [String] -> Distances -> Int
-overallPressure tunnel [] _ _ _  = 0
-overallPressure tunnel [v] minutes opened distances
-      | minutes - 1 >= 0 && v `notElem` opened = nextPressure + overallPressure tunnel [] minutes (v:opened) distances
-      | otherwise = 0
-      where
-        nextPressure = minutes * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
-overallPressure tunnel (v:vs) minutes opened distances
-      | minutes - 1 - dist > 0 && v `notElem` opened = nextPressure + overallPressure tunnel vs (minutes - 1 - dist) (v:opened) distances
-      | v `notElem` opened = flowRate (tunnel M.! v)
-      | otherwise = 0
-      where
-        nextPressure = (dist + 1) * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
+overallPressure tunnel path time opened distances = case path of
+  [] -> 0
+  [v] -> pressureFromVertex tunnel v time opened distances
+  (v:vs) -> pressureFromVertex tunnel v (timeToOpen + timeToWalk) opened distances + overallPressure tunnel vs remainingTime (v:opened) distances
+    where
+      timeToOpen = 1
+      remainingTime = max 0 (time - timeToOpen - timeToWalk)
+      timeToWalk = fromJust . M.lookup (v, head vs) $ distances
 
-        dist = fromJust . M.lookup (v, head vs) $ distances
+pressureFromVertex :: Tunnel -> String -> Time -> [String] -> Distances -> Int
+pressureFromVertex tunnel v time opened distances
+  | time - 1 >= 0 && v `notElem` opened = time * currentPressure
+  | otherwise = 0
+  where
+    currentPressure = sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened)
 
 distanceMatrix :: String -> M.Map String Valve -> M.Map (String, String) Int
 distanceMatrix start tunnel = go M.empty (start : valvesWithFlowGreaterThanZero tunnel)
