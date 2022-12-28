@@ -17,6 +17,10 @@ type Tunnel = M.Map String Valve
 
 type Distances = M.Map (String, String) Int
 
+type Path = [String]
+
+type Time = Int
+
 data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int, visited :: [String]} deriving (Show, Eq)
 
 solve :: IO String -> IO ()
@@ -30,28 +34,24 @@ createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
 test :: Tunnel -> Int
-test tunnel = maximum . map (\x -> overallPressure tunnel ("AA": x) 30 distances) $ valvesToOpen
+test tunnel = maximum . map (\x -> overallPressure tunnel ("AA": x) 30 [] distances) $ valvesToOpen
   where
     valvesToOpen = permutations . valvesWithFlowGreaterThanZero $ tunnel
     distances = distanceMatrix "AA" tunnel
 
-overallPressure :: Tunnel -> [String] -> Int -> Distances -> Int
-overallPressure tunnel path minutes distances = walk path minutes 0 []
-  where
-    walk [] time overallPressure _ = overallPressure
-    walk _ 0 overallPressure _ = overallPressure
-    walk [v] time overallPressure opened
-      | time - 1 >= 0 && v `notElem` opened = walk [] 0 nextPressure (v:opened)
-      | otherwise = overallPressure
+overallPressure :: Tunnel -> Path -> Time -> [String] -> Distances -> Int
+overallPressure tunnel [] _ _ _  = 0
+overallPressure tunnel [v] minutes opened distances
+      | minutes - 1 >= 0 && v `notElem` opened = nextPressure + overallPressure tunnel [] minutes (v:opened) distances
+      | otherwise = 0
       where
-        nextPressure = overallPressure + time * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
-
-    walk (v:vs) time overallPressure opened
-      | time - 1 - dist > 0 && v `notElem` opened = walk vs (time - 1 - dist) nextPressure  (v:opened)
+        nextPressure = minutes * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
+overallPressure tunnel (v:vs) minutes opened distances
+      | minutes - 1 - dist > 0 && v `notElem` opened = nextPressure + overallPressure tunnel vs (minutes - 1 - dist) (v:opened) distances
       | v `notElem` opened = flowRate (tunnel M.! v)
-      | otherwise = overallPressure
+      | otherwise = 0
       where
-        nextPressure = overallPressure + (dist + 1) * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
+        nextPressure = (dist + 1) * (sum . map (\x -> flowRate (tunnel M.! x)) $ (v:opened))
 
         dist = fromJust . M.lookup (v, head vs) $ distances
 
