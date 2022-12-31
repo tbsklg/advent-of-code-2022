@@ -45,7 +45,7 @@ dfs start time tunnel = go start time []
     go _ 0 _ = 0
     go current time opened
       | time < 1 = 0
-      | null nextToVisit = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
+      | null nextToVisit = pressure time
       | otherwise =
         maximum
           . map (\(to, distance) -> pressure (min (distance + 1) time) + go to (time - 1 - distance) nextOpened)
