@@ -59,24 +59,24 @@ dfs start time tunnel = go start time []
               fst x `notElem` opened
           ]
 
-        possibilites = map (\((_, to), distance) -> (to, distance)) . filter (\((from, _), _) -> from == current) . M.toList $ distances
+        possibilites = distances M.! current
 
     distances = distanceMatrix "AA" tunnel
 
-distanceMatrix :: String -> M.Map String Valve -> M.Map (String, String) Int
+distanceMatrix :: String -> M.Map String Valve -> M.Map String [(String, Int)]
 distanceMatrix start tunnel = go valves M.empty
   where
     valves = start : valvesWithFlowGreaterThanZero tunnel
 
-    go :: [String] -> M.Map (String, String) Int -> M.Map (String, String) Int
+    go :: [String] -> M.Map String [(String, Int)]-> M.Map String [(String, Int)]
     go [] matrix = matrix
     go (valve:vs) matrix = go vs (foldl (updateMatrix valve) matrix vs)
 
-    updateMatrix :: String -> M.Map (String, String) Int -> String -> M.Map (String, String) Int
-    updateMatrix from matrix to = M.union matrix distances
+    updateMatrix :: String -> M.Map String [(String, Int)] -> String -> M.Map String [(String, Int)]
+    updateMatrix from matrix to = M.unionWith (++) matrix distances
       where
         distance = fromJust . bfs from to $ tunnel
-        distances = M.fromList [((from, to), distance), ((to, from), distance)]
+        distances = M.fromList [(from, [(to,distance)]), (to, [(from, distance)])]
 
 bfs :: String -> String -> Tunnel -> Maybe Int
 bfs source dest tunnel = go (S.singleton source) S.empty 0
