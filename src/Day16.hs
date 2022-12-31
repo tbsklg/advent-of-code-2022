@@ -8,7 +8,7 @@ import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import qualified Data.Set as S
-import Debug.Trace
+import Debug.Trace (traceShow)
 import qualified Text.Parsec as P
 import Text.Parsec.Char (letter)
 import Text.Parsec.Combinator (sepBy)
@@ -34,48 +34,23 @@ solve xs = do
   result <- parseValves "" <$> xs
   case result of
     Left a -> error "Input parsing not working!"
-    Right a -> print . bfs "AA" 30 . createTunnel $ a
+    Right a -> print . dfs "AA" 30 . createTunnel $ a
 
 createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
-
-test :: Tunnel -> Int
-test tunnel = traceShow distances maximum . map (\x -> overallPressure tunnel ("AA" : x) 30 [] $ distances) $ valvesToOpen
-  where
-    valvesToOpen = permutations . valvesWithFlowGreaterThanZero $ tunnel
-    distances = distanceMatrix "AA" tunnel
-
-type Cache = M.Map (Tunnel, Path, Time, [String], Distances) Int
-
-overallPressure :: Tunnel -> Path -> Time -> [String] -> Distances -> Int
-overallPressure tunnel path time opened distances = case path of
-  [] -> 0
-  [v] -> pressureFromVertex tunnel v time opened distances
-  (v : vs) -> pressureFromVertex tunnel v (timeToOpen + timeToWalk) opened distances + overallPressure tunnel vs remainingTime (v : opened) distances
-    where
-      timeToOpen = 1
-      remainingTime = max 0 (time - timeToOpen - timeToWalk)
-      timeToWalk = fromJust . M.lookup (v, head vs) $ distances
-
-pressureFromVertex :: Tunnel -> String -> Time -> [String] -> Distances -> Int
-pressureFromVertex tunnel v time opened distances
-  | time - 1 >= 0 && v `notElem` opened = time * currentPressure
-  | otherwise = 0
-  where
-    currentPressure = sum . map (\x -> flowRate (tunnel M.! x)) $ (v : opened)
 
 dfs :: String -> Int -> Tunnel -> Int
 dfs start time tunnel = go start time [] (valvesWithFlowGreaterThanZero tunnel)
   where
     go _ 0 _ _ = 0
-    go current time opened [_] = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
+    go current time opened [v] = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
       where
         nextOpened = current : opened
     go current time opened toOpen
-      | null toOpen || time < 0 || null possibilites = 0
+      | null toOpen || time < 1 || null nextToVisit = 0
       | otherwise =
         maximum
-          . map (\(to, distance) -> pressure (distance + 1) + go to (time - 1 - distance) nextOpened nextToOpen)
+          . map (\(to, distance) -> pressure (min (distance + 1) time) + go to (time - 1 - distance) nextOpened nextToOpen)
           $ nextToVisit
       where
         pressure time = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
@@ -89,29 +64,38 @@ dfs start time tunnel = go start time [] (valvesWithFlowGreaterThanZero tunnel)
 
         possibilites = map (\((_, to), distance) -> (to, distance)) . filter (\((from, _), _) -> from == current) . M.toList $ distances
 
-    distances = distanceMatrix start tunnel
+    distances = distanceMatrix "AA" tunnel
 
 distanceMatrix :: String -> M.Map String Valve -> M.Map (String, String) Int
-distanceMatrix start tunnel = go M.empty (start : valvesWithFlowGreaterThanZero tunnel)
+distanceMatrix start tunnel = go valves M.empty
   where
-    go distances [] = distances
-    go distances (x : xs) = go (M.union newDistances distances) xs
-      where
-        newDistances = M.fromList [((x, y), fromJust . distance x y $ tunnel) | y <- M.keys tunnel \\ [x]]
+    valves = start : valvesWithFlowGreaterThanZero tunnel
 
-distance :: String -> String -> Tunnel -> Maybe Int
-distance start end tunnel = go [start] 0
-  where
-    go toVisit minute
-      | null toVisit = Nothing
-      | end `elem` toVisit = Just minute
-      | otherwise = go newToVisit (minute + 1)
+    go :: [String] -> M.Map (String, String) Int -> M.Map (String, String) Int
+    go [] matrix = matrix
+    go (valve:vs) matrix = go vs (foldl (updateMatrix valve) matrix vs)
+
+    updateMatrix :: String -> M.Map (String, String) Int -> String -> M.Map (String, String) Int
+    updateMatrix from matrix to = M.union matrix distances
       where
-        newToVisit =
+        distance = fromJust . bfs from to $ tunnel
+        distances = M.fromList [((from, to), distance), ((to, from), distance)]
+
+bfs :: String -> String -> Tunnel -> Maybe Int
+bfs source dest tunnel = go (S.singleton source) S.empty 0
+  where
+    go queue visited distance
+      | S.null queue = Nothing
+      | dest `elem` adjacentNeighbours = Just (distance + 1)
+      | otherwise = go nextQueue (S.union visited (S.fromList adjacentNeighbours)) (distance + 1)
+      where
+        adjacentNeighbours =
           [ x
-            | x <- concatMap (neighbours . (tunnel M.!)) toVisit,
-              x `notElem` toVisit
+            | v <- S.toList queue,
+              x <- neighbours $ tunnel M.! v,
+              not (x `S.member` visited)
           ]
+        nextQueue = S.fromList adjacentNeighbours
 
 valvesWithFlowGreaterThanZero :: Tunnel -> [String]
 valvesWithFlowGreaterThanZero tunnel = filter (\x -> flowRate (tunnel M.! x) > 0) (M.keys tunnel)
