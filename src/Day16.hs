@@ -40,21 +40,18 @@ createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
 dfs :: String -> Int -> Tunnel -> Int
-dfs start time tunnel = go start time [] (valvesWithFlowGreaterThanZero tunnel)
+dfs start time tunnel = go start time []
   where
-    go _ 0 _ _ = 0
-    go current time opened [v] = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
-      where
-        nextOpened = current : opened
-    go current time opened toOpen
-      | null toOpen || time < 1 || null nextToVisit = 0
+    go _ 0 _ = 0
+    go current time opened
+      | time < 1 = 0
+      | null nextToVisit = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
       | otherwise =
         maximum
-          . map (\(to, distance) -> pressure (min (distance + 1) time) + go to (time - 1 - distance) nextOpened nextToOpen)
+          . map (\(to, distance) -> pressure (min (distance + 1) time) + go to (time - 1 - distance) nextOpened)
           $ nextToVisit
       where
         pressure time = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
-        nextToOpen = toOpen \\ [current]
         nextOpened = current : opened
         nextToVisit =
           [ x
