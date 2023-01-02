@@ -30,7 +30,7 @@ simpleTunnel =
     [ ("AA", Valve {name = "AA", flowRate = 1, neighbours = ["CC", "DD"]}),
       ("CC", Valve {name = "CC", flowRate = 2, neighbours = ["AA", "BB"]}),
       ("BB", Valve {name = "BB", flowRate = 3, neighbours = ["CC", "DD"]}),
-      ("DD", Valve {name = "DD", flowRate = 0, neighbours = ["BB", "AA"]})
+      ("DD", Valve {name = "DD", flowRate = 3, neighbours = ["BB", "AA"]})
     ]
 
 spec :: Spec
@@ -59,7 +59,7 @@ spec = do
 
   describe "dfs" $ do
     it "should calculate the maximum pressure" $ do
-      dfs "AA" 30 simpleTunnel `shouldBe` 164
+      dfs "AA" 30 simpleTunnel `shouldBe` 240
       dfs "AA" 30 bigTunnel `shouldBe` 1651
 
   describe "dfs'" $ do

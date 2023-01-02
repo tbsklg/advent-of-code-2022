@@ -47,26 +47,29 @@ createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
 dfs' :: String -> Int -> Tunnel -> Int
-dfs' start time tunnel = traceShow distances guenther start start time $ S.singleton start
+dfs' start time tunnel = guenther start start time $ S.singleton start
   where
     guenther current elephant time opened
       | time < 1 = 0
       | null possibilities = pressure time opened
-      | otherwise = 
+      | otherwise =
           maximum
           . map
             ( \((current, dc), (elephant, de)) ->
-                pressure (min (dc + de + 2) time) nextOpened
-                  + guenther current elephant (time - 2 - dc - de) nextOpened
+                pressure (min (max dc de + 2) time ) nextOpened
+                  + guenther current elephant (time - 2 - max dc de) nextOpened
             )
           $ possibilities
       where
         nextOpened = S.insert elephant . S.insert current $ opened
 
-        possibilities = nub . concatMap (\x -> [(x, y) | y <- elephantPossibilities, x /= y]) $ currentPossibilities
+        possibilities = nub . concatMap (\x -> [(x, y) |
+           fst x `notElem` nextOpened,
+           y <- elephantPossibilities,
+           fst y `notElem` nextOpened]) $ currentPossibilities
 
-        currentPossibilities = [x | x <- S.toList $ distances M.! current, fst x `notElem` opened]
-        elephantPossibilities = [x | x <- S.toList $ distances M.! elephant, fst x `notElem` opened]
+        currentPossibilities = [x | x <- S.toList $ distances M.! current]
+        elephantPossibilities = [x | x <- S.toList $ distances M.! elephant]
 
     pressure time opened = (sum . map (\x -> flowRate (tunnel M.! x)) . S.toList $ opened) * time
     distances = distanceMatrix "AA" tunnel
@@ -88,7 +91,7 @@ dfs start time tunnel = go start time []
         nextToVisit =
           [ x
             | x <- possibilites,
-              fst x `notElem` opened
+              fst x `notElem` nextOpened
           ]
 
         possibilites = S.toList $ distances M.! current
@@ -106,7 +109,7 @@ distanceMatrix start tunnel = go valves M.empty
 
     updateMatrix :: String -> M.Map String (S.Set (String, Int)) -> String -> M.Map String (S.Set (String, Int))
     updateMatrix from matrix to
-      | from == to = M.empty 
+      | from == to = M.empty
       | otherwise = M.unionWith S.union matrix distances
       where
         distance = fromJust . bfs from to $ tunnel
