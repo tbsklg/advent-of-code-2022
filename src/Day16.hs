@@ -36,8 +36,40 @@ solve xs = do
     Left a -> error "Input parsing not working!"
     Right a -> print . dfs "AA" 30 . createTunnel $ a
 
+solvePartTwo :: IO String -> IO ()
+solvePartTwo xs = do
+  result <- parseValves "" <$> xs
+  case result of
+    Left a -> error "Input parsing not working!"
+    Right a -> print . dfs' "AA" 26 . createTunnel $ a
+
 createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
+
+dfs' :: String -> Int -> Tunnel -> Int
+dfs' start time tunnel = traceShow distances guenther start start time $ S.singleton start
+  where
+    guenther current elephant time opened
+      | time < 1 = 0
+      | null possibilities = pressure time opened
+      | otherwise = 
+          maximum
+          . map
+            ( \((current, dc), (elephant, de)) ->
+                pressure (min (dc + de + 2) time) nextOpened
+                  + guenther current elephant (time - 2 - dc - de) nextOpened
+            )
+          $ possibilities
+      where
+        nextOpened = S.insert elephant . S.insert current $ opened
+
+        possibilities = nub . concatMap (\x -> [(x, y) | y <- elephantPossibilities, x /= y]) $ currentPossibilities
+
+        currentPossibilities = [x | x <- S.toList $ distances M.! current, fst x `notElem` opened]
+        elephantPossibilities = [x | x <- S.toList $ distances M.! elephant, fst x `notElem` opened]
+
+    pressure time opened = (sum . map (\x -> flowRate (tunnel M.! x)) . S.toList $ opened) * time
+    distances = distanceMatrix "AA" tunnel
 
 dfs :: String -> Int -> Tunnel -> Int
 dfs start time tunnel = go start time []
@@ -59,27 +91,31 @@ dfs start time tunnel = go start time []
               fst x `notElem` opened
           ]
 
-        possibilites = distances M.! current
+        possibilites = S.toList $ distances M.! current
 
     distances = distanceMatrix "AA" tunnel
 
-distanceMatrix :: String -> M.Map String Valve -> M.Map String [(String, Int)]
+distanceMatrix :: String -> M.Map String Valve -> M.Map String (S.Set (String, Int))
 distanceMatrix start tunnel = go valves M.empty
   where
     valves = start : valvesWithFlowGreaterThanZero tunnel
 
-    go :: [String] -> M.Map String [(String, Int)]-> M.Map String [(String, Int)]
+    go :: [String] -> M.Map String (S.Set (String, Int)) -> M.Map String (S.Set (String, Int))
     go [] matrix = matrix
-    go (valve:vs) matrix = go vs (foldl (updateMatrix valve) matrix vs)
+    go (valve : vs) matrix = go vs (foldl (updateMatrix valve) matrix vs)
 
-    updateMatrix :: String -> M.Map String [(String, Int)] -> String -> M.Map String [(String, Int)]
-    updateMatrix from matrix to = M.unionWith (++) matrix distances
+    updateMatrix :: String -> M.Map String (S.Set (String, Int)) -> String -> M.Map String (S.Set (String, Int))
+    updateMatrix from matrix to
+      | from == to = M.empty 
+      | otherwise = M.unionWith S.union matrix distances
       where
         distance = fromJust . bfs from to $ tunnel
-        distances = M.fromList [(from, [(to,distance)]), (to, [(from, distance)])]
+        distances = M.fromList [(from, S.singleton (to, distance)), (to, S.singleton (from, distance))]
 
 bfs :: String -> String -> Tunnel -> Maybe Int
-bfs source dest tunnel = go (S.singleton source) S.empty 0
+bfs source dest tunnel
+  | source == dest = Just 0
+  | otherwise = go (S.singleton source) S.empty 0
   where
     go queue visited distance
       | S.null queue = Nothing

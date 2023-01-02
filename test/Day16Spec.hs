@@ -24,6 +24,7 @@ bigTunnel =
       ("JJ", Valve {name = "JJ", flowRate = 21, neighbours = ["II"]})
     ]
 
+simpleTunnel :: M.Map [Char] Valve
 simpleTunnel =
   M.fromList
     [ ("AA", Valve {name = "AA", flowRate = 1, neighbours = ["CC", "DD"]}),
@@ -43,30 +44,24 @@ spec = do
 
   describe "minDistance" $ do
     it "should return Nothing when start and end nodes are not connected" $ do
-      distance "AA" "ZZ" bigTunnel `shouldBe` Nothing
+      bfs "AA" "ZZ" bigTunnel `shouldBe` Nothing
 
     it "should return the correct distance when start and end nodes are connected" $ do
-      distance "AA" "CC" bigTunnel `shouldBe` Just 2
+      bfs "AA" "CC" bigTunnel `shouldBe` Just 2
 
     it "should return the correct distance when start and end nodes are the same" $ do
-      distance "AA" "AA" bigTunnel `shouldBe` Just 0
+      bfs "AA" "AA" bigTunnel `shouldBe` Just 0
 
     it "should return the correct distance when there are multiple paths to the end node" $ do
-      distance "BB" "DD" bigTunnel `shouldBe` Just 2
-      distance "HH" "II" bigTunnel `shouldBe` Just 6
-      distance "II" "JJ" bigTunnel `shouldBe` Just 1
+      bfs "BB" "DD" bigTunnel `shouldBe` Just 2
+      bfs "HH" "II" bigTunnel `shouldBe` Just 6
+      bfs "II" "JJ" bigTunnel `shouldBe` Just 1
 
-  describe "maxPressure" $ do
-    it "should return the path using a dfs strategy" $ do
-      pressureX simpleTunnel ["AA"] 1 `shouldBe` 1
-      pressureX simpleTunnel ["AA"] 5 `shouldBe` 5
-      pressureX simpleTunnel ["AA", "CC"] 5 `shouldBe` 11
-      pressureX simpleTunnel ["AA", "BB"] 1 `shouldBe` 3
-      pressureX simpleTunnel ["AA", "BB"] 5 `shouldBe` 11
-      pressureX simpleTunnel ["AA", "BB"] 6 `shouldBe` 15
+  describe "dfs" $ do
+    it "should calculate the maximum pressure" $ do
+      dfs "AA" 30 simpleTunnel `shouldBe` 164
+      dfs "AA" 30 bigTunnel `shouldBe` 1651
 
-      pressureX bigTunnel ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"] 30 `shouldBe` 1651
-
-  describe "overallDistance" $ do
-    it "should return the overall distance for a given path" $ do
-      test bigTunnel `shouldBe` 1651
+  describe "dfs'" $ do
+    it "should calculate the maximum pressure with 2 actors" $ do
+      dfs' "AA" 26 simpleTunnel `shouldBe` 0  
