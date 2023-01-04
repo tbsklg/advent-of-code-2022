@@ -50,23 +50,26 @@ dfs' :: String -> Int -> Tunnel -> Int
 dfs' start time tunnel = guenther start start time $ S.singleton start
   where
     guenther current elephant time opened
-      | time < 1 = 0
+      | time <= 0 = 0
       | null possibilities = pressure time opened
       | otherwise =
-          maximum
-          . map
-            ( \((current, dc), (elephant, de)) ->
-                pressure (min (max dc de + 2) time ) nextOpened
-                  + guenther current elephant (time - 2 - max dc de) nextOpened
-            )
+        maximum
+          . map releasePressure
           $ possibilities
       where
+        -- Problem: 1 wartet wenn unterschiedliche Distanz
+        releasePressure ((c, dc), (e, de))
+          | dc == de = pressure (min (dc + 1) time) nextOpened + guenther c e (time - dc - 1) nextOpened
+          | dc < de = pressure (min (dc + 1) time) nextOpened + pressure (min (de - dc) time) (S.insert c nextOpened) + guenther c e (time - de - 1) nextOpened
+          | otherwise = pressure (min (de + 1) time) nextOpened + pressure (min (dc - de) time) (S.insert e nextOpened) + guenther c e (time - dc - 1) nextOpened
+
         nextOpened = S.insert elephant . S.insert current $ opened
 
-        possibilities = nub . concatMap (\x -> [(x, y) |
-           fst x `notElem` nextOpened,
+        possibilities = [(x, y) |
+           x <- currentPossibilities,
+           fst x `notElem` opened,
            y <- elephantPossibilities,
-           fst y `notElem` nextOpened]) $ currentPossibilities
+           fst y `notElem` opened]
 
         currentPossibilities = [x | x <- S.toList $ distances M.! current]
         elephantPossibilities = [x | x <- S.toList $ distances M.! elephant]
@@ -108,9 +111,7 @@ distanceMatrix start tunnel = go valves M.empty
     go (valve : vs) matrix = go vs (foldl (updateMatrix valve) matrix vs)
 
     updateMatrix :: String -> M.Map String (S.Set (String, Int)) -> String -> M.Map String (S.Set (String, Int))
-    updateMatrix from matrix to
-      | from == to = M.empty
-      | otherwise = M.unionWith S.union matrix distances
+    updateMatrix from matrix to = M.unionWith S.union matrix distances
       where
         distance = fromJust . bfs from to $ tunnel
         distances = M.fromList [(from, S.singleton (to, distance)), (to, S.singleton (from, distance))]
