@@ -12,6 +12,7 @@ import Debug.Trace (traceShow)
 import qualified Text.Parsec as P
 import Text.Parsec.Char (letter)
 import Text.Parsec.Combinator (sepBy)
+import qualified Data.Foldable as M
 
 data Valve = Valve {name :: String, flowRate :: Int, neighbours :: [String]} deriving (Show, Eq)
 
@@ -23,7 +24,7 @@ type Path = [String]
 
 type Time = Int
 
-data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int, visited :: [String]} deriving (Show, Eq)
+data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int} deriving (Show, Eq)
 
 instance Ord Valve where
   compare :: Valve -> Valve -> Ordering
@@ -41,40 +42,44 @@ solvePartTwo xs = do
   result <- parseValves "" <$> xs
   case result of
     Left a -> error "Input parsing not working!"
-    Right a -> print . dfs' "AA" 26 . createTunnel $ a
+    Right a -> print . dfs' "AA" 30 . createTunnel $ a
 
 createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
-dfs' :: String -> Int -> Tunnel -> Int
-dfs' start time tunnel = guenther start start time $ S.singleton start
+dfs' start time tunnel = guenther start time $ tunnel
+
+guenther :: String -> Int -> Tunnel -> M.Map [String] Int
+guenther start time tunnel = go (DFS [start] [] time 0)
   where
-    guenther current elephant time opened
-      | time <= 0 = 0
-      | null possibilities = pressure time opened
+    go :: DFS -> M.Map [String] Int
+    go (DFS [] _ _ _) = M.empty
+    go (DFS (current : queue) opened time overallPressure)
+      | time < 1 = M.singleton opened overallPressure
+      | null nextToVisit = M.singleton nextOpened (overallPressure + pressure time nextOpened)
       | otherwise =
-        maximum
-          . map releasePressure
-          $ possibilities
+        M.unionsWith max
+          . map
+            ( \(to, distance) ->
+                go
+                  ( DFS
+                      (queue ++ [to])
+                      nextOpened
+                      (time - 1 - distance)
+                      (overallPressure + pressure (min (distance + 1) time) nextOpened)
+                  )
+            )
+          $ nextToVisit
       where
-        -- Problem: 1 wartet wenn unterschiedliche Distanz
-        releasePressure ((c, dc), (e, de))
-          | dc == de = pressure (min (dc + 1) time) nextOpened + guenther c e (time - dc - 1) nextOpened
-          | dc < de = pressure (min (dc + 1) time) nextOpened + pressure (min (de - dc) time) (S.insert c nextOpened) + guenther c e (time - de - 1) nextOpened
-          | otherwise = pressure (min (de + 1) time) nextOpened + pressure (min (dc - de) time) (S.insert e nextOpened) + guenther c e (time - dc - 1) nextOpened
+        nextOpened = current : opened
+        nextToVisit =
+          [ x
+            | x <- possibilites,
+              fst x `notElem` nextOpened
+          ]
+        possibilites = S.toList $ distances M.! current
 
-        nextOpened = S.insert elephant . S.insert current $ opened
-
-        possibilities = [(x, y) |
-           x <- currentPossibilities,
-           fst x `notElem` opened,
-           y <- elephantPossibilities,
-           fst y `notElem` opened]
-
-        currentPossibilities = [x | x <- S.toList $ distances M.! current]
-        elephantPossibilities = [x | x <- S.toList $ distances M.! elephant]
-
-    pressure time opened = (sum . map (\x -> flowRate (tunnel M.! x)) . S.toList $ opened) * time
+    pressure time opened = (sum . map (\x -> flowRate (tunnel M.! x)) $ opened) * time
     distances = distanceMatrix "AA" tunnel
 
 dfs :: String -> Int -> Tunnel -> Int
@@ -86,7 +91,11 @@ dfs start time tunnel = go start time []
       | null nextToVisit = pressure time
       | otherwise =
         maximum
-          . map (\(to, distance) -> pressure (min (distance + 1) time) + go to (time - 1 - distance) nextOpened)
+          . map
+            ( \(to, distance) ->
+                pressure (min (distance + 1) time)
+                  + go to (time - 1 - distance) nextOpened
+            )
           $ nextToVisit
       where
         pressure time = (sum . map (\x -> flowRate (tunnel M.! x)) $ nextOpened) * time
