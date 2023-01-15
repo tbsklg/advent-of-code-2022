@@ -57,11 +57,26 @@ spec = do
       bfs "HH" "II" bigTunnel `shouldBe` Just 6
       bfs "II" "JJ" bigTunnel `shouldBe` Just 1
 
-  describe "dfs" $ do
-    it "should calculate the maximum pressure" $ do
-      dfs "AA" 30 simpleTunnel `shouldBe` 240
-      dfs "AA" 30 bigTunnel `shouldBe` 1651
-
-  describe "dfs'" $ do
-    it "should calculate the maximum pressure with 2 actors" $ do
-      dfs' "AA" 26 simpleTunnel `shouldBe` 0  
+  describe "allPaths" $ do
+    it "should return all paths" $ do
+      allPaths (State {queue = ["AA"], opened = [], time = 26, overallPressure = 0}) simpleTunnel
+        `shouldBe` M.fromList
+          [ ([], 0),
+            (["AA"], 26),
+            (["AA", "BB"], 95),
+            (["AA", "BB", "CC", "DD"], 191),
+            (["AA", "BB", "DD", "CC"], 194),
+            (["AA", "CC"], 74),
+            (["AA", "CC", "BB", "DD"], 200),
+            (["AA", "CC", "DD", "BB"], 194),
+            (["AA", "DD"], 98),
+            (["AA", "DD", "BB", "CC"], 204),
+            (["AA", "DD", "CC", "BB"], 197)
+          ]
+  
+  describe "findMaxPressure" $ do
+    it "should return the max pressure" $ do
+      findMaxPressure "AA" 30 simpleTunnel `shouldBe` 240
+      findMaxPressure "AA" 30 bigTunnel `shouldBe` 1651
+      findMaxPressure' "AA" 26 simpleTunnel `shouldBe` 230
+      findMaxPressure' "AA" 26 bigTunnel `shouldBe` 1707

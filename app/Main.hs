@@ -2,7 +2,7 @@ module Main where
 
 import System.IO (IOMode (ReadMode), hGetContents, openFile)
 import Day16 (solve, solvePartTwo)
-import System.CPUTime
+import System.CPUTime ( getCPUTime )
 
 main :: IO ()
 main = do

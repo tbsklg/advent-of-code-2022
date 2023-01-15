@@ -3,12 +3,11 @@
 module Day16 where
 
 import Data.Function (on)
-import Data.List (intersect, maximumBy, nub, permutations, tails, (\\))
+import Data.List ( (\\), tails )
 import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import qualified Data.Set as S
-import Debug.Trace (traceShow)
 import qualified Text.Parsec as P
 import Text.Parsec.Char (letter)
 import Text.Parsec.Combinator (sepBy)
@@ -23,7 +22,7 @@ type Path = [String]
 
 type Time = Int
 
-data DFS = DFS {queue :: [String], opened :: [String], time :: Int, overallPressure :: Int} deriving (Show, Eq)
+data State = State {queue :: [String], opened :: [String], time :: Int, overallPressure :: Int} deriving (Show, Eq)
 
 instance Ord Valve where
   compare :: Valve -> Valve -> Ordering
@@ -34,34 +33,33 @@ solve xs = do
   result <- parseValves "" <$> xs
   case result of
     Left a -> error "Input parsing not working!"
-    Right a -> print . dfs "AA" 30 . createTunnel $ a
+    Right a -> print . findMaxPressure "AA" 30 . createTunnel $ a
 
 solvePartTwo :: IO String -> IO ()
 solvePartTwo xs = do
   result <- parseValves "" <$> xs
   case result of
     Left a -> error "Input parsing not working!"
-    Right a -> print . dfs' "AA" 26 . createTunnel $ a
+    Right a -> print . findMaxPressure "AA" 26 . createTunnel $ a
 
 createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
-dfs' start time tunnel = result
+findMaxPressure' :: [Char] -> Int -> M.Map String Valve -> Int
+findMaxPressure' start time tunnel = result
   where
-    me = guenther (DFS [start] [] time 0) tunnel
+    me = allPaths (State [start] [] time 0) tunnel
     result =
       maximum
-        [ v1 + v2 | (open1, v1) : elephants <- tails (M.toList me), 
-        (open2, v2) <- elephants, 
-        S.disjoint (S.fromList (open1 \\ ["AA"])) (S.fromList (open2 \\ ["AA"]))
+        [ v1 + v2 | (open1, v1) : elephants <- tails (M.toList me), (open2, v2) <- elephants, S.disjoint (S.fromList (open1 \\ ["AA"])) (S.fromList (open2 \\ ["AA"]))
         ]
 
-guenther :: DFS -> Tunnel -> M.Map [String] Int
-guenther dfs tunnel = go dfs
+allPaths :: State -> Tunnel -> M.Map [String] Int
+allPaths state tunnel = go state
   where
-    go :: DFS -> M.Map [String] Int
-    go (DFS [] _ _ _) = M.empty
-    go (DFS (current : queue) opened time overallPressure)
+    go :: State -> M.Map [String] Int
+    go (State [] _ _ _) = M.empty
+    go (State (current : queue) opened time overallPressure)
       | time < 1 = M.singleton opened overallPressure
       | null nextToVisit = M.singleton nextOpened (overallPressure + pressure time nextOpened)
       | otherwise =
@@ -71,7 +69,7 @@ guenther dfs tunnel = go dfs
               . map
                 ( \(to, distance) ->
                     go
-                      ( DFS
+                      ( State
                           (queue ++ [to])
                           nextOpened
                           (time - 1 - distance)
@@ -92,8 +90,8 @@ guenther dfs tunnel = go dfs
     pressure time opened = (sum . map (\x -> flowRate (tunnel M.! x)) $ opened) * time
     distances = distanceMatrix "AA" tunnel
 
-dfs :: String -> Int -> Tunnel -> Int
-dfs start time tunnel = go start time []
+findMaxPressure :: String -> Int -> Tunnel -> Int
+findMaxPressure start time tunnel = go start time []
   where
     go _ 0 _ = 0
     go current time opened
