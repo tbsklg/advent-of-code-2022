@@ -6,9 +6,13 @@ import System.CPUTime
 
 main :: IO ()
 main = do
-  -- startTime <- getCPUTime
+  startTime <- getCPUTime
   solve $ readFile "app/resources/day16.txt"
+  endTime <- getCPUTime
+  startTime2 <- getCPUTime
   solvePartTwo $ readFile "app/resources/day16.txt"
-  -- endTime <- getCPUTime
-  -- let elapsedTime = fromIntegral (endTime - startTime) / (10^9)
-  -- putStrLn ("Elapsed time: " ++ show elapsedTime ++ " milliseconds")
+  endTime2 <- getCPUTime
+  let elapsedTime = fromIntegral (endTime - startTime) / (10^9)
+  let elapsedTime2 = fromIntegral (endTime2 - startTime2) / (10^9)
+  putStrLn ("Elapsed time: " ++ show elapsedTime ++ " milliseconds")
+  putStrLn ("Elapsed time: " ++ show elapsedTime2 ++ " milliseconds")

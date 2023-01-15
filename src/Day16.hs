@@ -3,7 +3,7 @@
 module Day16 where
 
 import Data.Function (on)
-import Data.List (maximumBy, nub, permutations, (\\))
+import Data.List (intersect, maximumBy, nub, permutations, tails, (\\))
 import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
@@ -12,7 +12,6 @@ import Debug.Trace (traceShow)
 import qualified Text.Parsec as P
 import Text.Parsec.Char (letter)
 import Text.Parsec.Combinator (sepBy)
-import qualified Data.Foldable as M
 
 data Valve = Valve {name :: String, flowRate :: Int, neighbours :: [String]} deriving (Show, Eq)
 
@@ -24,7 +23,7 @@ type Path = [String]
 
 type Time = Int
 
-data DFS = DFS {queue :: [String], opened :: [String], minute :: Int, pressure :: Int} deriving (Show, Eq)
+data DFS = DFS {queue :: [String], opened :: [String], time :: Int, overallPressure :: Int} deriving (Show, Eq)
 
 instance Ord Valve where
   compare :: Valve -> Valve -> Ordering
@@ -42,15 +41,23 @@ solvePartTwo xs = do
   result <- parseValves "" <$> xs
   case result of
     Left a -> error "Input parsing not working!"
-    Right a -> print . dfs' "AA" 30 . createTunnel $ a
+    Right a -> print . dfs' "AA" 26 . createTunnel $ a
 
 createTunnel :: [Valve] -> Tunnel
 createTunnel = foldl (\y x -> M.insert (name x) x y) M.empty
 
-dfs' start time tunnel = guenther start time $ tunnel
+dfs' start time tunnel = result
+  where
+    me = guenther (DFS [start] [] time 0) tunnel
+    result =
+      maximum
+        [ v1 + v2 | (open1, v1) : elephants <- tails (M.toList me), 
+        (open2, v2) <- elephants, 
+        S.disjoint (S.fromList (open1 \\ ["AA"])) (S.fromList (open2 \\ ["AA"]))
+        ]
 
-guenther :: String -> Int -> Tunnel -> M.Map [String] Int
-guenther start time tunnel = go (DFS [start] [] time 0)
+guenther :: DFS -> Tunnel -> M.Map [String] Int
+guenther dfs tunnel = go dfs
   where
     go :: DFS -> M.Map [String] Int
     go (DFS [] _ _ _) = M.empty
@@ -58,20 +65,23 @@ guenther start time tunnel = go (DFS [start] [] time 0)
       | time < 1 = M.singleton opened overallPressure
       | null nextToVisit = M.singleton nextOpened (overallPressure + pressure time nextOpened)
       | otherwise =
-        M.unionsWith max
-          . map
-            ( \(to, distance) ->
-                go
-                  ( DFS
-                      (queue ++ [to])
-                      nextOpened
-                      (time - 1 - distance)
-                      (overallPressure + pressure (min (distance + 1) time) nextOpened)
-                  )
-            )
-          $ nextToVisit
+        M.unions
+          [ M.singleton opened (overallPressure + pressure time opened),
+            M.unions
+              . map
+                ( \(to, distance) ->
+                    go
+                      ( DFS
+                          (queue ++ [to])
+                          nextOpened
+                          (time - 1 - distance)
+                          (overallPressure + pressure (min (distance + 1) time) nextOpened)
+                      )
+                )
+              $ nextToVisit
+          ]
       where
-        nextOpened = current : opened
+        nextOpened = opened ++ [current]
         nextToVisit =
           [ x
             | x <- possibilites,
